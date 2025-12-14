@@ -1,4 +1,4 @@
-// --- ANNOTATIONS SYSTEM ---
+// --- ANNOTATIONS SYSTEM 2---
 
 // Variables globales pour le système d'annotations
 let annotations = [];
