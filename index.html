@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr" id="html-lang">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HydraSpec Pro V1.4.0</title>
+
+
+
+
+    <!-- TOUTES LES DÉPENDANCES EN LOCAL -->
+    <script src="lib/chart.min.js"></script>
+    <script src="lib/marked.min.js"></script>
+    <script src="lib/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="lib/all.min.css">
+
+
+
+    <!-- Fichiers de l'application -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body data-theme="steampunk2">
+
+    <header>
+        <div class="brand">
+            <i class="fas fa-cogs gear-icon"></i> HYDRASPEC PRO
+            <span style="font-size:0.7em; opacity:0.7; margin-left:5px;">V1.4.0</span>
+
+            <!-- Statut DANS la même div brand -->
+            <div style="display: flex; align-items: center; margin-left: 15px;">
+                <div id="status-indicator" style="
+                width: 8px;
+                height: 8px;
+                background: var(--accent-green);
+                border-radius: 50%;
+                margin-right: 6px;
+                animation: pulse 2s infinite;
+            "></div>
+                <div class="status-bar" id="status-bar" style="
+                font-size: 0.85em;
+                font-weight: normal;
+            ">Prêt.</div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+            <!-- Boutons de contrôle de visibilité -->
+            <button id="toggle-time-btn" class="header-btn toggle-btn active" onclick="toggleTimeDomain()"
+                title="Afficher/Masquer le domaine temporel">
+                <i class="fas fa-stopwatch"></i> <span>Temps</span>
+            </button>
+
+            <button id="toggle-freq-btn" class="header-btn toggle-btn active" onclick="toggleFreqDomain()"
+                title="Afficher/Masquer le domaine fréquentiel">
+                <i class="fas fa-wave-square"></i> <span>Fréquence</span>
+            </button>
+
+            <button id="toggle-spectro-btn" class="header-btn toggle-btn active" onclick="toggleSpectrogram()"
+                title="Afficher/Masquer le spectrogramme">
+                <i class="fas fa-chart-area"></i> <span>Spectro</span>
+            </button>
+            <!-- Outils Menu -->
+            <div class="dropdown">
+                <button class="header-btn" id="btn-tools">
+                    <i class="fas fa-tools"></i> <span data-i18n="tools">Outils</span> <i class="fas fa-caret-down"></i>
+                </button>
+                <div class="dropdown-content">
+                    <button onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open" style="width:20px;"></i> <span data-i18n="load_csv">Charger
+                            fichier .csv</span>
+                    </button>
+                    <button onclick="document.getElementById('projectInput').click()">
+                        <i class="fas fa-project-diagram" style="width:20px;"></i> <span data-i18n="open_proj">Ouvrir
+                            Projet (.hsp)</span>
+                    </button>
+                    <button onclick="initSaveProject()">
+                        <i class="fas fa-save" style="width:20px;"></i> <span data-i18n="save_proj">Enregistrer
+                            Projet</span>
+                    </button>
+                    <div style="border-top:1px solid var(--border-color); margin:5px 0;"></div>
+                    <button onclick="openModal('genModal')">
+                        <i class="fas fa-wave-square" style="width:20px;"></i> <span
+                            data-i18n="generator">Générateur</span>
+                    </button>
+                    <button onclick="initExportData()">
+                        <i class="fas fa-file-alt" style="width:20px;"></i> <span data-i18n="export_csv">Exporter
+                            fichier .csv</span>
+                    </button>
+                    <button onclick="initCaptureScreenshot()">
+                        <i class="fas fa-image" style="width:20px;"></i> <span data-i18n="export_png">Exporter
+                            PNG</span>
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="openModal('settingsModal')" class="header-btn" title="Paramètres">
+                <i class="fas fa-cog"></i> <span data-i18n="settings">Paramètres</span>
+            </button>
+
+            <button onclick="openModal('helpModal')" class="header-btn" title="Aide">
+                <i class="fas fa-question-circle"></i> <span data-i18n="help">Aide</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="main-container" id="capture-area">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+
+
+            <!-- Acquisition -->
+            <div class="control-group">
+                <h3><i class="fas fa-satellite-dish"></i> <span data-i18n="acquisition">Acquisition</span></h3>
+                <input type="file" id="fileInput" style="display:none" accept=".csv,.txt"
+                    onchange="handleFileUpload(this)">
+                <input type="file" id="projectInput" style="display:none" accept=".hsp"
+                    onchange="handleProjectUpload(this)">
+
+
+
+                <h3><span id="acquisition-title">Exemple</span></h3>
+
+
+                <!-- AJOUT DU SÉLECTEUR DE COLONNES -->
+<div class="control-row" id="column-selector-row" style="display: none;">
+    <label data-i18n="channel">Canal:</label> <!-- ← Avec data-i18n -->
+    <select id="column-selector" onchange="changeCurrentColumn(parseInt(this.value))"
+        style="width: 150px;">
+        <option value="0">Chargement...</option>
+    </select>
+</div>
+
+
+                <div class="control-row">
+                    <label data-i18n="step_ms">Pas (ms):</label>
+                    <input type="number" id="manual-step" value="1" step="0.01" onchange="updateFsFromStep()"
+                        style="width:80px">
+                </div>
+                <div class="control-row">
+                    <label data-i18n="fs_label">Fs:</label>
+                    <span id="display-fs" style="color:var(--accent-blue)">1000 Hz</span>
+                </div>
+                <div class="control-row">
+                    <label data-i18n="points_n">Points (N):</label>
+                    <span id="display-n" style="color:var(--accent-blue)">--</span>
+                </div>
+                <div class="control-row">
+                    <label>Incrément (ms):</label>
+                    <span id="display-increment" style="color:var(--accent-green)">--</span>
+                </div>
+
+                <!-- Stats Box -->
+                <div class="stats-box">
+                    <div style="border-bottom:1px solid var(--border-color); margin-bottom:5px; font-size:0.75rem; color:var(--text-muted);"
+                        data-i18n="stats_zone">
+                        Stats (Zone Curseurs)
+                    </div>
+                    <div class="stat-row"><label data-i18n="min">Min:</label> <span id="stat-min"
+                            class="stat-val">--</span></div>
+                    <div class="stat-row"><label data-i18n="max">Max:</label> <span id="stat-max"
+                            class="stat-val">--</span></div>
+                    <div class="stat-row"><label data-i18n="mean">Moyenne:</label> <span id="stat-mean"
+                            class="stat-val">--</span></div>
+                    <div class="stat-row"><label data-i18n="std">Écart Type:</label> <span id="stat-std"
+                            class="stat-val">--</span></div>
+                </div>
+
+                <!-- Zoom Temporel UNIQUE -->
+                <div class="control-group">
+                    <h3><i class="fas fa-search"></i> Zoom Temporel</h3>
+                    <div class="control-row">
+                        <label for="zoom-min">Min (s):</label> <!-- ← AJOUTER for="" -->
+                        <input type="number" id="zoom-min" step="0.001" style="width:80px" onchange="applyTimeZoom()"
+                            aria-label="Valeur minimum en secondes">
+                    </div>
+                    <div class="control-row">
+                        <label for="zoom-max">Max (s):</label> <!-- ← AJOUTER for="" -->
+                        <input type="number" id="zoom-max" step="0.001" style="width:80px" onchange="applyTimeZoom()"
+                            aria-label="Valeur maximum en secondes">
+                    </div>
+
+                    <!-- CHAMPS POUR LE ZOOM VERTICAL -->
+                    <div class="control-row">
+                        <label>Min Y (Bar):</label>
+                        <input type="number" id="zoom-y-min" step="0.1" style="width:80px" onchange="applyTimeZoom()">
+                    </div>
+                    <div class="control-row">
+                        <label>Max Y (Bar):</label>
+                        <input type="number" id="zoom-y-max" step="0.1" style="width:80px" onchange="applyTimeZoom()">
+                    </div>
+
+
+                </div>
+
+                <!-- Annotations -->
+                <div class="control-group">
+                    <h3><i class="fas fa-pen"></i> <span data-i18n="notes">Annotations</span></h3>
+                    <textarea id="user-notes" rows="4" placeholder="Notes..."
+                        style="width:93%; resize:vertical;"></textarea>
+                </div>
+
+                <!-- Analysis Settings -->
+                <div class="control-group">
+                    <h3><i class="fas fa-sliders-h"></i> <span data-i18n="fft_params">Paramètres FFT</span></h3>
+                    <div class="control-row">
+                        <label data-i18n="window">Fenêtre:</label>
+                        <select id="window-func" onchange="performAnalysis()">
+                            <option value="rect">Rectangulaire</option>
+                            <option value="hanning" selected>Hanning</option>
+                            <option value="hamming">Hamming</option>
+                            <option value="blackman">Blackman</option>
+                        </select>
+                    </div>
+                    <div class="control-row">
+                        <label data-i18n="fft_pts">Points FFT:</label>
+                        <select id="fft-size" onchange="performAnalysis()">
+                            <option value="256">256</option>
+                            <option value="512">512</option>
+                            <option value="1024">1024</option>
+                            <option value="2048">2048</option>
+                            <option value="4096" selected>4096</option>
+                            <option value="8192">8192</option>
+                            <option value="16384">16384</option>
+                        </select>
+                    </div>
+                    <div style="margin-top:5px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <label data-i18n="peak_sens">Sensibilité Pics:</label>
+                            <span style="font-size:0.7em; color:var(--text-muted)">(Log)</span>
+                        </div>
+                        <input type="range" id="peak-threshold" min="1" max="100" value="50" style="width:100%"
+                            oninput="updateSensitivityUI()">
+                    </div>
+                </div>
+
+                <!-- Spectrogram Settings -->
+                <div class="control-group">
+                    <h3><i class="fas fa-chart-area"></i> <span data-i18n="spectrogram">Spectrogramme STFT</span></h3>
+
+                    <div class="spectrogram-controls">
+                        <div>
+                            <label>Fenêtre STFT:</label>
+                            <select id="stft-window-size" onchange="updateSpectrogram()">
+                                <option value="256">256</option>
+                                <option value="512" selected>512</option>
+                                <option value="1024">1024</option>
+                                <option value="2048">2048</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Recouvrement:</label>
+                            <select id="stft-overlap" onchange="updateSpectrogram()">
+                                <option value="0.25">25%</option>
+                                <option value="0.50" selected>50%</option>
+                                <option value="0.75">75%</option>
+                                <option value="0.99">90%</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Échelle:</label>
+                            <select id="stft-scale" onchange="updateSpectrogram()">
+                                <option value="linear">Linéaire</option>
+                                <option value="log" selected>Logarithmique</option>
+                                <option value="db">dB</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Freq Max (Hz):</label>
+                            <input type="number" id="stft-freq-max" value="500" step="10" onchange="updateSpectrogram()"
+                                style="width:100%">
+                        </div>
+                    </div>
+
+                    <div style="margin-top:8px;">
+                        <label>Plage Couleurs:</label>
+                        <div class="color-scale" id="color-scale"></div>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div class="control-group">
+                    <h3><i class="fas fa-chart-line"></i> <span data-i18n="results">Résultats</span></h3>
+                    <div
+                        style="background:var(--input-bg); padding:10px; border-radius:4px; font-size:0.85rem; border:1px solid var(--border-color);">
+                        <div class="control-row">
+                            <span data-i18n="freq_dom">Fréq. Dominante:</span>
+                            <span id="res-peak" style="color:var(--accent-green); font-weight:bold;">-- Hz</span>
+                        </div>
+                        <div class="control-row">
+                            <span data-i18n="amp_max">Amplitude Max:</span>
+                            <span id="res-amp" style="color:var(--accent-green); font-weight:bold;">-- Bar</span>
+                        </div>
+                        <div class="control-row">
+                            <span data-i18n="rms_sel">RMS Sélection:</span>
+                            <span id="res-rms" style="color:var(--accent-blue);">--</span>
+                        </div>
+                    </div>
+                </div>
+        </aside>
+
+
+
+        <!-- Main Plots -->
+        <main class="plots-area" id="plots-container">
+
+            <!-- Time Plot -->
+
+            <div class="plot-container" id="time-container" style="height: 30%;">
+
+                <div class="plot-toolbar">
+                    <span class="toolbar-title"><i class="fas fa-stopwatch"></i> <span data-i18n="time_domain">DOMAINE
+                            TEMPOREL</span></span>
+                    <div class="toolbar-controls">
+                        <button onclick="centerCursors()" class="icon-btn" title="Centrer les curseurs">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
+                        <button onclick="resetTimeZoom()" class="icon-btn" title="Reset Zoom">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="flex:1; position:relative; min-height:0;">
+                    <canvas id="timeChart"></canvas>
+                </div>
+                <div style="position:absolute; top:1px; right:165px; font-size:0.7em; color:var(--text-muted);">
+                    Zoom: Molette (X+Y) | Shift: Y | Ctrl: X<br>
+                    Déplacer curseurs: Shift + clic entre curseurs
+                </div>
+            </div>
+
+            <!-- Resizer Handle -->
+            <div class="gutter-v" id="resizer1"></div>
+
+            <!-- Frequency Plot -->
+            <div class="plot-container" id="freq-container" style="height: 30%;">
+                <div class="plot-toolbar">
+                    <span class="toolbar-title"><i class="fas fa-wave-square"></i> <span data-i18n="freq_domain">DOMAINE
+                            FRÉQUENTIEL</span> <span style="font-weight:normal; font-size:0.9em; opacity:0.8;"
+                            data-i18n="dirac_spec">(Spectre de Dirac/FFT)</span></span>
+                    <button onclick="resetFreqZoom()" class="icon-btn" title="Reset Zoom"><i
+                            class="fas fa-expand"></i></button>
+                </div>
+                <div style="flex:1; position:relative; min-height:0;">
+                    <canvas id="freqChart"></canvas>
+                </div>
+                <div style="position:absolute; top: 10px; right:90px; font-size:0.7em; color:var(--text-muted);">
+                    Zoom: Molette (Max X)
+                </div>
+            </div>
+
+            <!-- Resizer Handle -->
+            <div class="gutter-v" id="resizer2"></div>
+
+            <!-- Spectrogram Plot -->
+            <div class="plot-container" id="spectro-container" style="flex: 1;">
+                <div class="plot-toolbar">
+                    <span class="toolbar-title">
+                        <i class="fas fa-chart-area"></i> <span data-i18n="spectrogram_title">SPECTROGRAMME STFT</span>
+                    </span>
+
+                </div>
+                <div style="flex:1; position:relative; min-height:0;">
+                    <canvas id="spectroChart"></canvas>
+                </div>
+                <div style="position:absolute; top:10px; right:90px; font-size:0.7em; color:var(--text-muted);">
+                    Visualisation temps-fréquence
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <button class="btn-close" onclick="closeModal('settingsModal')">&times;</button>
+            <h2 style="margin-top:0;"><i class="fas fa-cog"></i> <span data-i18n="settings">Paramètres</span></h2>
+
+            <div class="settings-grid">
+                <div>
+                    <label data-i18n="language">Langue</label>
+                    <select id="lang-select" onchange="changeLanguage(this.value)" style="width:100%; margin-top:5px;">
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                <div>
+                    <label data-i18n="theme">Thème</label>
+                    <select id="theme-select" onchange="changeTheme(this.value)" style="width:100%; margin-top:5px;">
+                        <option value="dark">Sombre (Dark)</option>
+                        <option value="light">Clair (Light)</option>
+                        <option value="steampunk">⚙️ Steampunk</option>
+                        <option value="steampunk2" selected>⚙️ Steampunk2 (Industriel)</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top:20px; text-align:right;">
+                <button onclick="closeModal('settingsModal')" class="primary"
+                    style="width:100px; margin-left:auto;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filename Input Modal -->
+    <div id="filenameModal" class="modal">
+        <div class="modal-content" style="width:600px;">
+            <button class="btn-close" onclick="closeModal('filenameModal')">&times;</button>
+            <h3 style="margin-top:0;">
+                <i class="fas fa-download"></i> Exporter le fichier
+            </h3>
+
+            <div style="margin-bottom: 15px; padding: 10px; background: var(--input-bg); border-radius: 5px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                    <i class="fas fa-info-circle" style="color: var(--accent-blue);"></i>
+                    <strong>Emplacement :</strong>
+                </div>
+                <div style="font-size: 0.9em;">
+                    Le fichier sera enregistré dans votre <strong>dossier de téléchargements</strong>.<br>
+                    <span style="color: var(--text-muted); font-size: 0.85em;">
+                        (Généralement : C:\Users\VotreNom\Downloads\)
+                    </span>
+                </div>
+            </div>
+
+            <label for="export-filename">Nom du fichier :</label>
+            <input type="text" id="export-filename" style="width:100%; margin: 10px 0 15px 0;"
+                placeholder="Entrez le nom...">
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button onclick="showHelpDownloadLocation()" class="btn-small" style="background: var(--input-bg);">
+                    <i class="fas fa-question-circle"></i> Où sont mes fichiers ?
+                </button>
+
+                <div>
+                    <button onclick="closeModal('filenameModal')" style="margin-right: 10px; background: #555;">
+                        Annuler
+                    </button>
+                    <button id="confirm-export-btn" class="success" style="width:100px;">
+                        Exporter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ajouter une modale d'aide supplémentaire -->
+    <div id="downloadHelpModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <button class="btn-close" onclick="closeModal('downloadHelpModal')">&times;</button>
+            <h3 style="margin-top:0;">
+                <i class="fas fa-folder-open"></i> Localisation des fichiers exportés
+            </h3>
+
+            <div style="margin: 15px 0;">
+                <h4><i class="fas fa-windows"></i> Pour Windows :</h4>
+                <ul>
+                    <li>Ouvrez l'Explorateur de fichiers (Win+E)</li>
+                    <li>Allez dans "Ce PC" → "Téléchargements"</li>
+                    <li>Ou tapez directement : <code>C:\Users\[VotreNom]\Downloads\</code></li>
+                </ul>
+
+                <h4><i class="fas fa-apple"></i> Pour Mac :</h4>
+                <ul>
+                    <li>Ouvrez le Finder</li>
+                    <li>Dans la barre latérale, cliquez sur "Téléchargements"</li>
+                    <li>Ou allez dans : <code>/Users/[VotreNom]/Downloads/</code></li>
+                </ul>
+
+                <h4><i class="fas fa-keyboard"></i> Raccourcis utiles :</h4>
+                <ul>
+                    <li><strong>Ctrl+J</strong> : Ouvrir les téléchargements (Chrome/Edge)</li>
+                    <li><strong>Ctrl+T</strong> puis <code>chrome://downloads</code></li>
+                    <li><strong>Ctrl+Shift+Y</strong> : Historique des téléchargements (Firefox)</li>
+                </ul>
+
+                <div style="margin-top: 20px; padding: 10px; background: var(--input-bg); border-radius: 5px;">
+                    <i class="fas fa-lightbulb"></i> <strong>Astuce :</strong> Vous pouvez modifier
+                    le dossier de destination dans les paramètres de votre navigateur.
+                </div>
+            </div>
+
+            <div style="text-align:right;">
+                <button onclick="closeModal('downloadHelpModal')" class="primary" style="width:100px;">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content" style="width: 700px;">
+            <button class="btn-close" onclick="closeModal('helpModal')">&times;</button>
+            <h2 style="margin-top:0; color:var(--accent-blue);"><i class="fas fa-question-circle"></i> <span
+                    data-i18n="help_title">Aide & Détails Techniques</span></h2>
+
+            <div id="help-content" class="help-body" style="max-height:500px; overflow-y:auto; padding-right:10px;">
+                <!-- Content injected via JS based on Language -->
+            </div>
+            <div style="margin-top:15px; text-align:right;">
+                <button onclick="closeModal('helpModal')" class="primary"
+                    style="width:80px; margin-left:auto;">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generator Modal -->
+    <div id="genModal" class="modal">
+        <div class="modal-content">
+            <button class="btn-close" onclick="closeModal('genModal')">&times;</button>
+            <h3>Générateur de Signal</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div><label>Fs (Hz)</label><input type="number" id="gen-fs" value="1000" style="width:100%"></div>
+                <div><label>Durée (s)</label><input type="number" id="gen-duration" value="5" style="width:100%"></div>
+                <div><label>Bruit (Bar)</label><input type="number" id="gen-noise" value="0.2" style="width:100%"></div>
+                <div><label>DC (Bar)</label><input type="number" id="gen-dc" value="100" style="width:100%"></div>
+            </div>
+            <div style="margin:10px 0; border-top:1px solid var(--border-color); padding-top:10px;">
+                <label>Composantes (Freq | Amp | Phase):</label>
+                <div id="freq-inputs-container"></div>
+                <button onclick="addFreqRow()" class="btn-small" style="margin-top:5px;">+ Ajouter</button>
+            </div>
+            <button onclick="generateSignal()" class="primary" style="width:100%">Générer</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+    <script src="charts.js"></script>
+    <script src="spectrogram.js"></script>
+    <script src="utils.js"></script>
+     <script src="halo.js"></script>
+    
+    <!-- TOUTES LES DÉPENDANCES EN LOCAL -->
+<script src="annotations.js"></script>
+
+
+</body>
+
+</html>
