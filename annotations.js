@@ -6,8 +6,6 @@ let isCreatingAnnotation = false;
 let tempAnnotation = null;
 let currentHoveredAnnotation = null;
 let annotationsVisible = true; // nouvelle variable pour la visibilité globale
-let isDraggingMarker = false; // nouveau flag pour déplacement du marqueur
-let draggedMarkerAnnotation = null; // annotation dont on déplace le marqueur
 
 class Annotation {
     constructor(id, time, yValue, text, color = '#FFD700') {
@@ -183,10 +181,9 @@ function toggleAllAnnotations() {
 
 // Configurer les événements pour les annotations
 function setupAnnotationEvents(canvas) {
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let draggedAnnotation = null;
+    // Événements pour le drag du MARQUEUR sur le CANVAS
+    let isDraggingMarkerOnCanvas = false;
+    let draggedMarkerOnCanvas = null;
 
     // Clic pour créer une annotation
     canvas.addEventListener('click', function(e) {
@@ -229,7 +226,7 @@ function setupAnnotationEvents(canvas) {
         }
     });
     
-    // Événements de souris pour le drag & drop
+    // Événements de souris pour le drag & drop du MARQUEUR
     canvas.addEventListener('mousedown', function(e) {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -241,164 +238,100 @@ function setupAnnotationEvents(canvas) {
         const markerAnnotation = findMarkerAtPosition(x, y, chart);
         if (markerAnnotation && e.ctrlKey) {
             // Ctrl + drag sur marqueur = déplacer le point d'ancrage
-            isDraggingMarker = true;
-            draggedMarkerAnnotation = markerAnnotation;
-            canvas.style.cursor = 'move';
+            isDraggingMarkerOnCanvas = true;
+            draggedMarkerOnCanvas = markerAnnotation;
+            canvas.style.cursor = 'grabbing';
             setStatus('Déplacez le point d\'ancrage - Relâchez pour valider');
+
+            // Désactiver pointer-events sur toutes les boîtes pendant le drag
+            annotations.forEach(ann => {
+                const el = document.getElementById(ann.id);
+                if (el) el.style.pointerEvents = 'none';
+            });
+
             e.stopPropagation();
             e.preventDefault();
-            return;
-        }
-
-        const annotation = findAnnotationAtPosition(x, y, chart);
-
-        if (annotation && !isCreatingAnnotation) {
-            // Drag normal de la boîte = déplacer la position relative
-            draggedAnnotation = annotation;
-            isDragging = true;
-            dragStartX = x - annotation.offsetX;
-            dragStartY = y - annotation.offsetY;
-            annotation.zIndex = 2000; // Mettre au premier plan
-            canvas.style.cursor = 'move';
-            setStatus('Déplacez l\'annotation - Relâchez pour valider');
-            updateAnnotationsDisplay();
-            e.stopPropagation();
         }
     });
     
+    // Événements de drag du marqueur sur DOCUMENT (pour ne pas perdre le drag)
+    document.addEventListener('mousemove', function(e) {
+        if (!isDraggingMarkerOnCanvas || !draggedMarkerOnCanvas) return;
+
+        const canvas = document.getElementById('timeChart');
+        const chart = appState.charts.time;
+        if (!canvas || !chart) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const xScale = chart.scales.x;
+        const yScale = chart.scales.y;
+
+        const timeValue = xScale.getValueForPixel(x);
+        const yValue = yScale.getValueForPixel(y);
+
+        if (timeValue && yValue !== undefined) {
+            // Mettre à jour en temps réel
+            draggedMarkerOnCanvas.time = timeValue / 1000; // conversion ms → s
+            draggedMarkerOnCanvas.yValue = yValue;
+
+            // Forcer le redessin
+            if (chart && chart.update) {
+                chart.update('none');
+            }
+        }
+    });
+
+    document.addEventListener('mouseup', function(e) {
+        if (isDraggingMarkerOnCanvas && draggedMarkerOnCanvas) {
+            // Réactiver pointer-events sur toutes les boîtes
+            annotations.forEach(ann => {
+                const el = document.getElementById(ann.id);
+                if (el) el.style.pointerEvents = 'auto';
+            });
+
+            // Sauvegarder la nouvelle position du point d'ancrage
+            const canvas = document.getElementById('timeChart');
+            if (canvas) canvas.style.cursor = 'default';
+
+            const unit = appState.yAxisLabel || "Bar";
+            const annotation = draggedMarkerOnCanvas;
+
+            // Mettre à jour le texte de l'annotation avec les nouvelles coordonnées
+            updateAnnotationMarkerPosition(annotation, annotation.time, annotation.yValue);
+
+            setStatus(`Point d'ancrage déplacé: ${annotation.time.toFixed(3)}s, ${annotation.yValue.toFixed(2)} ${unit}`);
+
+            isDraggingMarkerOnCanvas = false;
+            draggedMarkerOnCanvas = null;
+        }
+    });
+
+    // Changement de curseur sur le canvas
     canvas.addEventListener('mousemove', function(e) {
+        if (isDraggingMarkerOnCanvas) return; // Ne pas changer le curseur pendant un drag
+
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
         const chart = appState.charts.time;
 
-        // Drag & drop du MARQUEUR (point d'ancrage)
-        if (isDraggingMarker && draggedMarkerAnnotation) {
-            const xScale = chart.scales.x;
-            const yScale = chart.scales.y;
-
-            const timeValue = xScale.getValueForPixel(x);
-            const yValue = yScale.getValueForPixel(y);
-
-            if (timeValue && yValue !== undefined) {
-                // Mettre à jour en temps réel
-                draggedMarkerAnnotation.time = timeValue / 1000; // conversion ms → s
-                draggedMarkerAnnotation.yValue = yValue;
-
-                // Forcer le redessin
-                if (chart && chart.update) {
-                    chart.update('none');
-                }
-            }
-            return;
-        }
-
-        // Drag & drop de la BOÎTE d'annotation (position relative)
-        if (isDragging && draggedAnnotation) {
-            draggedAnnotation.offsetX = x - dragStartX;
-            draggedAnnotation.offsetY = y - dragStartY;
-
-            // Mettre à jour la position directement sans tout recréer (optimisation)
-            const element = document.getElementById(draggedAnnotation.id);
-            if (element && chart) {
-                const pos = draggedAnnotation.getPixelPosition(chart);
-                if (pos) {
-                    element.style.left = (pos.x + draggedAnnotation.offsetX) + 'px';
-                    element.style.top = (pos.y + draggedAnnotation.offsetY) + 'px';
-                }
-            }
-
-            // Forcer le redessin des connecteurs
-            if (chart && chart.update) {
-                chart.update('none');
-            }
-            return;
-        }
-
-        // Mise à jour du survol (seulement si on ne drag pas)
-        const hovered = findAnnotationAtPosition(x, y, chart);
-
-        if (hovered !== currentHoveredAnnotation) {
-            if (currentHoveredAnnotation) {
-                updateAnnotationStyle(currentHoveredAnnotation, false);
-            }
-            currentHoveredAnnotation = hovered;
-            if (hovered) {
-                updateAnnotationStyle(hovered, true);
-            }
-        }
-
         // Changer le curseur si on survole un marqueur avec Ctrl
-        if (e.ctrlKey && !isDragging && !isDraggingMarker) {
+        if (e.ctrlKey) {
             const markerAnnotation = findMarkerAtPosition(x, y, chart);
             if (markerAnnotation) {
                 canvas.style.cursor = 'grab';
             } else {
                 canvas.style.cursor = 'default';
             }
-        } else if (!isDragging && !isDraggingMarker) {
-            // Changer le curseur si on survole une annotation
-            if (hovered) {
-                canvas.style.cursor = 'move';
-            } else {
-                canvas.style.cursor = 'default';
-            }
+        } else {
+            canvas.style.cursor = 'default';
         }
     });
     
-    canvas.addEventListener('mouseup', function() {
-        if (isDragging && draggedAnnotation) {
-            // Sauvegarder la nouvelle position relative de la boîte
-            canvas.style.cursor = 'default';
-            setStatus(`Annotation repositionnée (offset: ${draggedAnnotation.offsetX.toFixed(0)}px, ${draggedAnnotation.offsetY.toFixed(0)}px)`);
-            saveAnnotations();
-        }
-
-        if (isDraggingMarker && draggedMarkerAnnotation) {
-            // Sauvegarder la nouvelle position du point d'ancrage
-            canvas.style.cursor = 'default';
-            const unit = appState.yAxisLabel || "Bar";
-            const annotation = draggedMarkerAnnotation;
-
-            // Mettre à jour le texte de l'annotation avec les nouvelles coordonnées
-            updateAnnotationMarkerPosition(annotation, annotation.time, annotation.yValue);
-
-            setStatus(`Point d'ancrage déplacé: ${annotation.time.toFixed(3)}s, ${annotation.yValue.toFixed(2)} ${unit}`);
-        }
-
-        isDragging = false;
-        draggedAnnotation = null;
-        isDraggingMarker = false;
-        draggedMarkerAnnotation = null;
-    });
-    
-    canvas.addEventListener('mouseleave', function() {
-        // Annuler les opérations en cours si on quitte le canvas
-        if (isDraggingMarker && draggedMarkerAnnotation) {
-            // Sauvegarder quand même si on sort du canvas
-            const unit = appState.yAxisLabel || "Bar";
-            const annotation = draggedMarkerAnnotation;
-            updateAnnotationMarkerPosition(annotation, annotation.time, annotation.yValue);
-            setStatus(`Point d'ancrage sauvegardé: ${annotation.time.toFixed(3)}s`);
-        }
-
-        if (isDragging && draggedAnnotation) {
-            // Sauvegarder la position relative
-            saveAnnotations();
-        }
-
-        isDragging = false;
-        draggedAnnotation = null;
-        isDraggingMarker = false;
-        draggedMarkerAnnotation = null;
-        canvas.style.cursor = 'default';
-
-        if (currentHoveredAnnotation) {
-            updateAnnotationStyle(currentHoveredAnnotation, false);
-            currentHoveredAnnotation = null;
-        }
-    });
     
     // Raccourci clavier pour le mode annotation
     document.addEventListener('keydown', function(e) {
@@ -666,12 +599,81 @@ function createAnnotationElement(annotation, chart, container) {
         e.stopPropagation();
         editAnnotation(annotation);
     });
-    
+
+    // Drag & drop de la boîte d'annotation (pour changer sa position relative)
+    setupAnnotationDrag(annElement, annotation, chart);
+
     // Événements pour le redimensionnement
     setupAnnotationResize(annElement, annotation);
 
     // Ajouter au conteneur
     container.appendChild(annElement);
+}
+
+// Configurer le drag & drop d'une annotation (position relative)
+function setupAnnotationDrag(element, annotation, chart) {
+    let isDragging = false;
+    let startMouseX = 0;
+    let startMouseY = 0;
+    let startOffsetX = 0;
+    let startOffsetY = 0;
+
+    element.addEventListener('mousedown', function(e) {
+        // Ne pas drag si on clique sur le bouton fermer ou le resize handle
+        if (e.target.closest('.annotation-close') || e.target.closest('[style*="nwse-resize"]')) {
+            return;
+        }
+
+        // Ne pas drag en mode édition (double-clic)
+        if (e.detail === 2) return; // double-clic
+
+        isDragging = true;
+        startMouseX = e.clientX;
+        startMouseY = e.clientY;
+        startOffsetX = annotation.offsetX;
+        startOffsetY = annotation.offsetY;
+
+        element.style.cursor = 'grabbing';
+        element.style.zIndex = '2000';
+        setStatus('Déplacez l\'annotation - Relâchez pour valider');
+
+        e.stopPropagation();
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+
+        const dx = e.clientX - startMouseX;
+        const dy = e.clientY - startMouseY;
+
+        annotation.offsetX = startOffsetX + dx;
+        annotation.offsetY = startOffsetY + dy;
+
+        // Mettre à jour la position de l'élément
+        const pos = annotation.getPixelPosition(chart);
+        if (pos) {
+            element.style.left = (pos.x + annotation.offsetX) + 'px';
+            element.style.top = (pos.y + annotation.offsetY) + 'px';
+        }
+
+        // Forcer le redessin des connecteurs
+        if (chart && chart.update) {
+            chart.update('none');
+        }
+    });
+
+    document.addEventListener('mouseup', function(e) {
+        if (isDragging) {
+            isDragging = false;
+            element.style.cursor = 'move';
+            element.style.zIndex = annotation.zIndex.toString();
+
+            // Sauvegarder
+            saveAnnotations();
+            setStatus(`Annotation repositionnée (offset: ${annotation.offsetX.toFixed(0)}px, ${annotation.offsetY.toFixed(0)}px)`);
+        }
+    });
 }
 
 // Configurer le redimensionnement des annotations
