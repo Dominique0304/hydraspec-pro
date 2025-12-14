@@ -367,9 +367,17 @@ canvas.addEventListener('mousedown', (e) => {
             appState.lastX = e.clientX;
             appState.lastY = e.clientY;
             chart.update('none');
-            
+
             // Mise à jour immédiate des champs de zoom
             updateZoomInputs();
+
+            // METTRE À JOUR L'ANALYSE FFT POUR LA ZONE VISIBLE
+            if(!appState.fftTimeout) {
+                appState.fftTimeout = setTimeout(() => {
+                    performAnalysis();
+                    appState.fftTimeout = null;
+                }, 100);
+            }
         }
         else if (appState.dragTarget === 'both') {
             const dx = e.clientX - appState.dragStartX;
@@ -461,9 +469,17 @@ function handleZoom(chart, e) {
     }
     
     chart.update('none');
-    
+
     // METTRE À JOUR LES CHAMPS DE ZOOM APRÈS CHAQUE ZOOM
     setTimeout(updateZoomInputs, 10);
+
+    // METTRE À JOUR L'ANALYSE FFT POUR LA ZONE VISIBLE
+    if(!appState.fftTimeout) {
+        appState.fftTimeout = setTimeout(() => {
+            performAnalysis();
+            appState.fftTimeout = null;
+        }, 100);
+    }
 }
 function handleFreqZoom(chart, e) {
     const zoomFactor = 1.1;
@@ -546,24 +562,32 @@ function updateStats() {
 }
 
 function performAnalysis() {
-    console.log("performAnalysis called - Cursors:", appState.cursorStart, appState.cursorEnd);
-    
+    console.log("performAnalysis called");
+
     const t = appState.fullDataTime;
     const v = appState.fullDataPressure;
-    
-    // Conversion en millisecondes pour la recherche
-    const cursorStartMs = appState.cursorStart * 1000;
-    const cursorEndMs = appState.cursorEnd * 1000;
-    
-    console.log("Searching for indices between:", cursorStartMs, "ms and", cursorEndMs, "ms");
-    
-    const i1 = t.findIndex(val => val >= cursorStartMs);
-    let i2 = t.findIndex(val => val >= cursorEndMs);
-    
+
+    // Utiliser la zone VISIBLE (zoom) au lieu des curseurs
+    const chart = appState.charts.time;
+    if (!chart || !chart.options.scales.x) {
+        console.log("Chart not ready - skipping analysis");
+        return;
+    }
+
+    // Obtenir les limites visibles du graphique (en millisecondes)
+    const visibleMin = chart.options.scales.x.min || t[0];
+    const visibleMax = chart.options.scales.x.max || t[t.length - 1];
+
+    console.log("Analyzing visible range:", visibleMin, "ms to", visibleMax, "ms");
+
+    // Trouver les indices correspondant à la zone visible
+    const i1 = t.findIndex(val => val >= visibleMin);
+    let i2 = t.findIndex(val => val >= visibleMax);
+
     if(i2 === -1) i2 = t.length;
-    
+
     console.log("Found indices:", i1, "to", i2, "out of", t.length, "points");
-    
+
     if(i1 === -1 || i1 >= i2) {
         console.log("Invalid selection - skipping analysis");
         return;

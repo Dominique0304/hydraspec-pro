@@ -1021,10 +1021,20 @@ function importAnnotations() {
 // Initialiser lors du chargement
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initAnnotationSystem, 1000); // Attendre que l'application soit chargée
-    
+
     // Ajouter les fonctions d'export/import au menu Outils
     addAnnotationToolsToMenu();
 });
+
+// Fonction pour effacer toutes les annotations (utilisée lors du chargement de nouveaux fichiers)
+function clearAnnotations() {
+    annotations = [];
+    updateAnnotationsDisplay();
+    const chart = appState.charts.time;
+    if (chart && chart.update) {
+        chart.update('none');
+    }
+}
 
 // Ajouter les outils d'annotation au menu
 function addAnnotationToolsToMenu() {
@@ -1047,8 +1057,7 @@ function addAnnotationToolsToMenu() {
         clearBtn.innerHTML = '<i class="fas fa-trash" style="width:20px;"></i> Effacer Annotations';
         clearBtn.onclick = function() {
             if (confirm('Effacer toutes les annotations ?')) {
-                annotations = [];
-                updateAnnotationsDisplay();
+                clearAnnotations();
                 saveAnnotations();
                 setStatus('Annotations effacées');
             }

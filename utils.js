@@ -204,7 +204,17 @@ function handleFileUpload(input) {
     // Charger la première colonne
     loadCurrentColumnData();
     updateColumnSelector();
-    
+
+    // Effacer toutes les annotations existantes
+    if (typeof clearAnnotations === 'function') {
+        clearAnnotations();
+    }
+
+    // Centrer les curseurs automatiquement
+    if (typeof centerCursors === 'function') {
+        centerCursors();
+    }
+
     setStatus(`Fichier chargé: ${validLines} points, ${appState.availableColumns.length} colonnes, Fs: ${appState.fs.toFixed(1)} Hz`);
     
 } else {
@@ -237,6 +247,12 @@ function handleProjectUpload(input) {
         document.getElementById('user-notes').value = d.notes || "";
         document.getElementById('display-fs').textContent = appState.fs + " Hz";
         document.getElementById('display-increment').textContent = appState.timeIncrement.toFixed(2) + " ms";
+
+        // Charger les annotations si présentes
+        if (d.appState.annotations && typeof loadAnnotations === 'function') {
+            loadAnnotations(d.appState.annotations);
+        }
+
         updateTimeChart();
         updateStats();
         performAnalysis();
@@ -352,7 +368,8 @@ function performSaveProject(filename) {
             fs: appState.fs,
             cursorStart: appState.cursorStart,
             cursorEnd: appState.cursorEnd,
-            timeIncrement: appState.timeIncrement
+            timeIncrement: appState.timeIncrement,
+            annotations: appState.annotations || [] // Sauvegarder les annotations
         },
         data: {
             time: Array.from(appState.fullDataTime),
