@@ -61,6 +61,13 @@ appState.charts.time = new Chart(ctxTime, {
     plugins: [{
         id: 'cursors',
         afterDraw: (chart) => drawCursors(chart)
+    }, {
+        id: 'annotationConnectors',
+        afterDatasetsDraw: (chart) => {
+            if (typeof drawAnnotationConnectors === 'function') {
+                drawAnnotationConnectors(chart);
+            }
+        }
     }]
 });
 

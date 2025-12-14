@@ -473,19 +473,22 @@ function updateAnnotationsDisplay() {
     annotations.forEach(annotation => {
         // Vérifier si l'annotation correspond au canal actuel
         const belongsToCurrentChannel = annotation.columnIndex === currentColumnIndex;
-        
+
         // Masquer si canal différent OU si visibilité globale désactivée
         if (!belongsToCurrentChannel || !annotationsVisible) {
             annotation.visible = false;
             return;
         }
-        
+
         annotation.visible = true;
         createAnnotationElement(annotation, chart, container);
     });
-    
-    // Dessiner les lignes de connexion
-    drawAnnotationConnectors(chart);
+
+    // Les lignes de connexion sont maintenant dessinées automatiquement par le plugin Chart.js
+    // Forcer une mise à jour du graphique pour redessiner les connecteurs
+    if (chart && chart.update) {
+        chart.update('none');
+    }
 }
 
 // Créer un élément HTML pour une annotation
