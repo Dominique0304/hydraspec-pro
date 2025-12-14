@@ -300,7 +300,22 @@ function setupAnnotationEvents(canvas) {
         if (isDragging && draggedAnnotation) {
             draggedAnnotation.offsetX = x - dragStartX;
             draggedAnnotation.offsetY = y - dragStartY;
-            updateAnnotationsDisplay();
+
+            // Mettre à jour la position directement sans tout recréer (optimisation)
+            const element = document.getElementById(draggedAnnotation.id);
+            const chart = appState.charts.time;
+            if (element && chart) {
+                const pos = draggedAnnotation.getPixelPosition(chart);
+                if (pos) {
+                    element.style.left = (pos.x + draggedAnnotation.offsetX) + 'px';
+                    element.style.top = (pos.y + draggedAnnotation.offsetY) + 'px';
+                }
+            }
+
+            // Forcer le redessin des connecteurs
+            if (chart && chart.update) {
+                chart.update('none');
+            }
         }
     });
     
@@ -638,11 +653,15 @@ function setupAnnotationResize(element, annotation) {
         
         annotation.width = Math.max(150, startWidth + dx);
         annotation.height = Math.max(80, startHeight + dy);
-        
+
         element.style.width = annotation.width + 'px';
         element.style.height = annotation.height + 'px';
-        
-        updateAnnotationsDisplay();
+
+        // Forcer le redessin des connecteurs sans tout recréer (optimisation)
+        const chart = appState.charts.time;
+        if (chart && chart.update) {
+            chart.update('none');
+        }
     });
     
     document.addEventListener('mouseup', function() {
@@ -712,6 +731,26 @@ function drawAnnotationConnectors(chart) {
 
     // Restaurer le contexte
     ctx.restore();
+}
+
+// Mettre à jour les positions des boîtes d'annotation (appelé à chaque rendu du graphique)
+function updateAnnotationPositions(chart) {
+    if (!chart) return;
+
+    annotations.forEach(annotation => {
+        if (!annotation.visible) return;
+
+        const element = document.getElementById(annotation.id);
+        if (!element) return;
+
+        // Recalculer la position du point d'ancrage
+        const pos = annotation.getPixelPosition(chart);
+        if (!pos) return;
+
+        // Mettre à jour la position de l'élément HTML
+        element.style.left = (pos.x + annotation.offsetX) + 'px';
+        element.style.top = (pos.y + annotation.offsetY) + 'px';
+    });
 }
 
 // Mettre à jour le style d'une annotation (survol)
