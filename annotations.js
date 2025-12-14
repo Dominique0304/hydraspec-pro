@@ -5,7 +5,6 @@ let annotations = [];
 let isCreatingAnnotation = false;
 let tempAnnotation = null;
 let currentHoveredAnnotation = null;
-let annotationConnectorLines = [];
 let annotationsVisible = true; // nouvelle variable pour la visibilité globale
 let isDraggingMarker = false; // nouveau flag pour déplacement du marqueur
 let draggedMarkerAnnotation = null; // annotation dont on déplace le marqueur
@@ -458,11 +457,10 @@ function editAnnotation(annotation) {
 function updateAnnotationsDisplay() {
     const container = document.getElementById('annotation-container');
     if (!container) return;
-    
+
     // Supprimer toutes les annotations existantes
     container.innerHTML = '';
-    annotationConnectorLines = [];
-    
+
     const chart = appState.charts.time;
     if (!chart) return;
     
@@ -596,18 +594,9 @@ function createAnnotationElement(annotation, chart, container) {
     
     // Événements pour le redimensionnement
     setupAnnotationResize(annElement, annotation);
-    
+
     // Ajouter au conteneur
     container.appendChild(annElement);
-    
-    // Stocker la ligne de connexion
-    annotationConnectorLines.push({
-        annotation: annotation,
-        startX: pos.x,
-        startY: pos.y,
-        endX: pos.x + annotation.offsetX,
-        endY: pos.y + annotation.offsetY
-    });
 }
 
 // Configurer le redimensionnement des annotations
@@ -668,47 +657,59 @@ function setupAnnotationResize(element, annotation) {
 function drawAnnotationConnectors(chart) {
     const canvas = document.getElementById('timeChart');
     if (!canvas || !chart.ctx) return;
-    
+
     const ctx = chart.ctx;
-    
+
     // Sauvegarder le contexte
     ctx.save();
-    
-    annotationConnectorLines.forEach(line => {
+
+    // IMPORTANT: Recalculer les positions en pixels à chaque rendu
+    // car elles changent lors du zoom/pan
+    annotations.forEach(annotation => {
         // Ne dessiner que si l'annotation est visible
-        if (!line.annotation.visible) return;
-        
+        if (!annotation.visible) return;
+
+        // Recalculer la position du point en pixels (valeurs dynamiques)
+        const pos = annotation.getPixelPosition(chart);
+        if (!pos) return;
+
+        const startX = pos.x;
+        const startY = pos.y;
+        const endX = pos.x + annotation.offsetX;
+        const endY = pos.y + annotation.offsetY;
+
+        // Dessiner la ligne pointillée
         ctx.beginPath();
-        ctx.moveTo(line.startX, line.startY);
-        
+        ctx.moveTo(startX, startY);
+
         // Ligne avec une légère courbure
-        const cp1x = line.startX + (line.endX - line.startX) * 0.5;
-        const cp1y = line.startY;
-        const cp2x = line.startX + (line.endX - line.startX) * 0.5;
-        const cp2y = line.endY;
-        
-        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, line.endX, line.endY);
-        
-        ctx.strokeStyle = line.annotation.color;
+        const cp1x = startX + (endX - startX) * 0.5;
+        const cp1y = startY;
+        const cp2x = startX + (endX - startX) * 0.5;
+        const cp2y = endY;
+
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+
+        ctx.strokeStyle = annotation.color;
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 3]);
         ctx.globalAlpha = 1; // Toujours visible
         ctx.stroke();
-        
+
         // Point d'ancrage (marqueur)
         ctx.setLineDash([]);
         ctx.beginPath();
-        ctx.arc(line.startX, line.startY, 6, 0, Math.PI * 2);
-        ctx.fillStyle = line.annotation.color;
+        ctx.arc(startX, startY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = annotation.color;
         ctx.globalAlpha = 1; // Toujours visible
         ctx.fill();
-        
+
         // Bordure blanche pour meilleure visibilité
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
         ctx.stroke();
     });
-    
+
     // Restaurer le contexte
     ctx.restore();
 }
