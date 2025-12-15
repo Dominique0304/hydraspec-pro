@@ -206,3 +206,133 @@ function resetChannelConfig() {
 
     console.log("🔄 Configuration réinitialisée");
 }
+
+// Mettre à jour le graphique temporel avec multi-canaux
+function updateTimeChartMultiChannel() {
+    const chart = appState.charts.time;
+
+    if (!chart || !appState.channelConfig || appState.channelConfig.length === 0) {
+        console.log("⚠️ Pas de configuration multi-canaux, utilisation du mode simple");
+        return false; // Retourner false pour utiliser le mode simple
+    }
+
+    console.log("🎨 Mise à jour du graphique en mode multi-canaux");
+
+    // Obtenir les canaux visibles
+    const visibleChannels = appState.channelConfig.filter(config => config.visible);
+
+    if (visibleChannels.length === 0) {
+        console.log("⚠️ Aucun canal visible");
+        return false;
+    }
+
+    // Déterminer les données de l'axe X
+    let xData;
+    if (appState.xAxisChannel === 0) {
+        // Utiliser le temps
+        xData = appState.fullDataTime;
+    } else {
+        // Utiliser un autre canal
+        const xChannelIndex = appState.availableColumns[appState.xAxisChannel - 1].index;
+        xData = appState.allColumnData[xChannelIndex];
+    }
+
+    // Downsampling si nécessaire
+    let downsampleStep = 1;
+    if (xData.length > 15000) {
+        downsampleStep = Math.ceil(xData.length / 15000);
+    }
+
+    const downsampledX = downsampleStep > 1 ? xData.filter((_, i) => i % downsampleStep === 0) : Array.from(xData);
+
+    // Créer les datasets pour chaque canal visible
+    chart.data.labels = downsampledX;
+    chart.data.datasets = visibleChannels.map(config => {
+        const channelData = appState.allColumnData[config.index];
+        const downsampledY = downsampleStep > 1 ? channelData.filter((_, i) => i % downsampleStep === 0) : Array.from(channelData);
+
+        return {
+            label: config.label,
+            data: downsampledY,
+            borderColor: config.color,
+            backgroundColor: config.color + '20',
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false,
+            yAxisID: config.yAxisID
+        };
+    });
+
+    // Configurer les échelles X
+    chart.options.scales.x.min = downsampledX[0];
+    chart.options.scales.x.max = downsampledX[downsampledX.length - 1];
+
+    // Label de l'axe X
+    if (appState.xAxisChannel === 0) {
+        chart.options.scales.x.title.text = 'Temps (ms)';
+    } else {
+        const xChannelConfig = appState.availableColumns[appState.xAxisChannel - 1];
+        chart.options.scales.x.title.text = xChannelConfig.label + (xChannelConfig.unit ? ` (${xChannelConfig.unit})` : '');
+    }
+
+    // Supprimer les anciennes échelles Y
+    const oldScales = Object.keys(chart.options.scales).filter(key => key !== 'x');
+    oldScales.forEach(key => {
+        delete chart.options.scales[key];
+    });
+
+    // Créer les échelles Y pour chaque canal visible
+    visibleChannels.forEach(config => {
+        const channelData = appState.allColumnData[config.index];
+
+        // Calculer min/max
+        let yMin, yMax;
+        if (config.yMin !== null && config.yMax !== null) {
+            yMin = config.yMin;
+            yMax = config.yMax;
+        } else {
+            const dataMin = Math.min(...channelData);
+            const dataMax = Math.max(...channelData);
+            const range = dataMax - dataMin;
+            yMin = config.yMin !== null ? config.yMin : dataMin - range * 0.1;
+            yMax = config.yMax !== null ? config.yMax : dataMax + range * 0.1;
+        }
+
+        // Créer l'échelle Y
+        chart.options.scales[config.yAxisID] = {
+            type: 'linear',
+            position: config.yAxisPosition,
+            display: config.yAxisPosition !== 'hidden',
+            min: yMin,
+            max: yMax,
+            grid: {
+                color: '#333',
+                drawOnChartArea: config.yAxisPosition === 'left' // Seulement la première échelle affiche la grille
+            },
+            ticks: {
+                color: config.color,
+                font: {
+                    size: 11
+                }
+            },
+            title: {
+                display: true,
+                text: config.label + (config.unit ? ` (${config.unit})` : ''),
+                color: config.color,
+                font: {
+                    size: 12,
+                    weight: 'bold'
+                }
+            }
+        };
+    });
+
+    chart.update();
+
+    // Mettre à jour les annotations
+    if (typeof updateAnnotationsDisplay === 'function') {
+        setTimeout(updateAnnotationsDisplay, 50);
+    }
+
+    return true; // Mode multi-canaux activé
+}

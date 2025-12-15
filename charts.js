@@ -480,6 +480,18 @@ function handleFreqZoom(chart, e) {
 
 // --- CHART DATA UPDATES ---
 function updateTimeChart() {
+    // Essayer le mode multi-canaux d'abord
+    if (typeof updateTimeChartMultiChannel === 'function') {
+        const multiChannelSuccess = updateTimeChartMultiChannel();
+        if (multiChannelSuccess) {
+            // Mode multi-canaux utilisé avec succès
+            document.getElementById('display-n').textContent = appState.fullDataTime.length;
+            setTimeout(updateZoomInputs, 10);
+            return;
+        }
+    }
+
+    // Sinon, utiliser le mode simple (un seul canal)
     const chart = appState.charts.time;
     let t = appState.fullDataTime;
     let v = appState.fullDataPressure;
@@ -490,29 +502,29 @@ function updateTimeChart() {
     }
     chart.data.labels = Array.from(t);
     chart.data.datasets[0].data = Array.from(v);
-    
+
     // Réinitialiser les échelles X et Y
     chart.options.scales.x.min = t[0];
     chart.options.scales.x.max = t[t.length-1];
-    
+
     // Calculer les limites Y automatiquement
     const minY = Math.min(...v);
     const maxY = Math.max(...v);
     const rangeY = maxY - minY;
     chart.options.scales.y.min = minY - rangeY * 0.1;
     chart.options.scales.y.max = maxY + rangeY * 0.1;
-    
+
     // METTRE À JOUR LE LABEL DE L'AXE Y SI DISPONIBLE
     if (appState.yAxisLabel) {
         chart.options.scales.y.title.text = appState.yAxisLabel;
     }
-    
+
     chart.update();
     document.getElementById('display-n').textContent = appState.fullDataTime.length;
-    
+
     // Mettre à jour les champs de zoom
     setTimeout(updateZoomInputs, 10);
-    
+
     // ✅ NOUVEAU : Mettre à jour les annotations
     if (typeof updateAnnotationsDisplay === 'function') {
         setTimeout(updateAnnotationsDisplay, 50);

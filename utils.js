@@ -205,6 +205,11 @@ function handleFileUpload(input) {
     loadCurrentColumnData();
     updateColumnSelector();
 
+    // Initialiser la configuration multi-canaux
+    if (typeof initChannelConfig === 'function') {
+        initChannelConfig();
+    }
+
     // Attendre que le graphique soit prêt avant d'effectuer les opérations
     setTimeout(() => {
         console.log("🔧 Post-load operations...");
