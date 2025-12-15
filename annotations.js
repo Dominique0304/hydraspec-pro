@@ -405,7 +405,7 @@ function updateAnnotationMarkerPosition(annotation, newTime, newYValue) {
     
     // Mettre à jour le texte avec les nouvelles valeurs
     const unit = appState.yAxisLabel || "Bar";
-    annotation.text = `Annotation à ${newTime.toFixed(3)}s; ${newYValue.toFixed(2)} ${unit}`;
+    annotation.text = `${newTime.toFixed(3)}s; ${newYValue.toFixed(2)} ${unit}`;
     
     updateAnnotationsDisplay();
     saveAnnotations();
@@ -430,7 +430,7 @@ function createAnnotation(time, yValue) {
     const unit = appState.yAxisLabel || "Bar";
     
     // Texte par défaut avec temps ET valeur
-    const defaultText = `Annotation à ${time.toFixed(3)}s; ${yValue.toFixed(2)} ${unit}`;
+    const defaultText = `${time.toFixed(3)}s; ${yValue.toFixed(2)} ${unit}`;
     
     // Ouvrir une boîte de dialogue pour le texte
     const text = prompt('Entrez votre annotation :', defaultText);
