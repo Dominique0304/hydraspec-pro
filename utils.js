@@ -205,15 +205,26 @@ function handleFileUpload(input) {
     loadCurrentColumnData();
     updateColumnSelector();
 
-    // Effacer toutes les annotations existantes
-    if (typeof clearAnnotations === 'function') {
-        clearAnnotations();
-    }
+    // Attendre que le graphique soit prêt avant d'effectuer les opérations
+    setTimeout(() => {
+        console.log("🔧 Post-load operations...");
 
-    // Centrer les curseurs automatiquement
-    if (typeof centerCursors === 'function') {
-        centerCursors();
-    }
+        // Effacer toutes les annotations existantes
+        if (typeof clearAnnotations === 'function') {
+            console.log("✅ Clearing annotations...");
+            clearAnnotations();
+        } else {
+            console.error("❌ clearAnnotations function not found!");
+        }
+
+        // Centrer les curseurs automatiquement
+        if (typeof centerCursors === 'function') {
+            console.log("✅ Centering cursors...");
+            centerCursors();
+        } else {
+            console.error("❌ centerCursors function not found!");
+        }
+    }, 200); // Délai pour assurer que le chart est prêt
 
     setStatus(`Fichier chargé: ${validLines} points, ${appState.availableColumns.length} colonnes, Fs: ${appState.fs.toFixed(1)} Hz`);
     
@@ -250,7 +261,10 @@ function handleProjectUpload(input) {
 
         // Charger les annotations si présentes
         if (d.appState.annotations && typeof loadAnnotations === 'function') {
+            console.log("📝 Loading annotations from project:", d.appState.annotations.length, "annotations");
             loadAnnotations(d.appState.annotations);
+        } else {
+            console.log("⚠️ No annotations found in project file");
         }
 
         updateTimeChart();
@@ -361,6 +375,9 @@ function handleExportConfirm() {
 }
 
 function performSaveProject(filename) {
+    const annotationsToSave = appState.annotations || [];
+    console.log("💾 Saving project with", annotationsToSave.length, "annotations");
+
     const projectData = {
         version: "1.4.0",
         date: new Date().toISOString(),
@@ -369,7 +386,7 @@ function performSaveProject(filename) {
             cursorStart: appState.cursorStart,
             cursorEnd: appState.cursorEnd,
             timeIncrement: appState.timeIncrement,
-            annotations: appState.annotations || [] // Sauvegarder les annotations
+            annotations: annotationsToSave // Sauvegarder les annotations
         },
         data: {
             time: Array.from(appState.fullDataTime),
@@ -377,6 +394,13 @@ function performSaveProject(filename) {
         },
         notes: document.getElementById('user-notes').value
     };
+
+    console.log("💾 Project data prepared:", {
+        version: projectData.version,
+        annotationCount: projectData.appState.annotations.length,
+        dataPoints: projectData.data.time.length
+    });
+
     const blob = new Blob([JSON.stringify(projectData)], { type: "application/json" });
     downloadBlob(blob, `${filename}.hsp`);
     setStatus("Projet enregistré.");

@@ -844,7 +844,9 @@ function deleteAnnotation(id) {
 // Sauvegarder les annotations dans le projet
 function saveAnnotations() {
     if (!appState) return;
-    
+
+    console.log("💾 Saving", annotations.length, "annotations to appState");
+
     // Sauvegarder dans l'état de l'application
     appState.annotations = annotations.map(ann => ({
         id: ann.id,
@@ -859,15 +861,22 @@ function saveAnnotations() {
         pinned: ann.pinned,
         columnIndex: ann.columnIndex
     }));
-    
+
+    console.log("✅ Annotations saved to appState:", appState.annotations.length);
+
     // Mettre à jour les notes utilisateur
     updateUserNotesWithAnnotations();
 }
 
 // Charger les annotations sauvegardées
 function loadAnnotations(savedAnnotations) {
-    if (!savedAnnotations || !Array.isArray(savedAnnotations)) return;
-    
+    if (!savedAnnotations || !Array.isArray(savedAnnotations)) {
+        console.log("⚠️ No annotations to load");
+        return;
+    }
+
+    console.log("📥 Loading", savedAnnotations.length, "annotations");
+
     annotations = savedAnnotations.map(data => {
         const ann = new Annotation(data.id, data.time, data.yValue, data.text, data.color);
         ann.width = data.width || 200;
@@ -879,7 +888,8 @@ function loadAnnotations(savedAnnotations) {
         ann.visible = true;
         return ann;
     });
-    
+
+    console.log("✅ Loaded", annotations.length, "annotations successfully");
     updateAnnotationsDisplay();
 }
 
@@ -1028,12 +1038,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Fonction pour effacer toutes les annotations (utilisée lors du chargement de nouveaux fichiers)
 function clearAnnotations() {
+    console.log("🗑️ Clearing", annotations.length, "annotations");
     annotations = [];
+    appState.annotations = []; // Également vider appState
     updateAnnotationsDisplay();
     const chart = appState.charts.time;
     if (chart && chart.update) {
         chart.update('none');
     }
+    console.log("✅ Annotations cleared");
 }
 
 // Ajouter les outils d'annotation au menu

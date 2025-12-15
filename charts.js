@@ -562,7 +562,7 @@ function updateStats() {
 }
 
 function performAnalysis() {
-    console.log("performAnalysis called");
+    console.log("🔍 performAnalysis called");
 
     const t = appState.fullDataTime;
     const v = appState.fullDataPressure;
@@ -570,7 +570,7 @@ function performAnalysis() {
     // Utiliser la zone VISIBLE (zoom) au lieu des curseurs
     const chart = appState.charts.time;
     if (!chart || !chart.options.scales.x) {
-        console.log("Chart not ready - skipping analysis");
+        console.log("⚠️ Chart not ready - skipping analysis");
         return;
     }
 
@@ -578,7 +578,7 @@ function performAnalysis() {
     const visibleMin = chart.options.scales.x.min || t[0];
     const visibleMax = chart.options.scales.x.max || t[t.length - 1];
 
-    console.log("Analyzing visible range:", visibleMin, "ms to", visibleMax, "ms");
+    console.log("📊 FFT: Analyzing VISIBLE RANGE (not cursors):", visibleMin.toFixed(2), "ms to", visibleMax.toFixed(2), "ms");
 
     // Trouver les indices correspondant à la zone visible
     const i1 = t.findIndex(val => val >= visibleMin);
@@ -700,18 +700,26 @@ function updateChartSizes() {
  // Le reste du code reste identique...
 
 function centerCursors() {
+    console.log("🎯 centerCursors() called");
+
     const chart = appState.charts.time;
     if (!chart || !appState.fullDataTime.length) {
+        console.error("❌ Cannot center cursors: chart or data not ready");
         setStatus("Aucune donnée à centrer");
         return;
     }
-    
+
+    if (!chart.options.scales.x.min || !chart.options.scales.x.max) {
+        console.error("❌ Cannot center cursors: chart scales not initialized");
+        return;
+    }
+
     // 1. Obtenir les limites VISIBLES sur l'axe X (en millisecondes)
     const visibleMin = chart.options.scales.x.min;  // Valeur minimale visible
     const visibleMax = chart.options.scales.x.max;  // Valeur maximale visible
-    
-    console.log("DEBUG - Visible min:", visibleMin, "ms =", visibleMin/1000, "s");
-    console.log("DEBUG - Visible max:", visibleMax, "ms =", visibleMax/1000, "s");
+
+    console.log("📏 Visible min:", visibleMin, "ms =", (visibleMin/1000).toFixed(3), "s");
+    console.log("📏 Visible max:", visibleMax, "ms =", (visibleMax/1000).toFixed(3), "s");
     
     // 2. Calculer la largeur visible sur l'axe X
     const visibleWidth = visibleMax - visibleMin;  // en millisecondes
@@ -745,7 +753,9 @@ function centerCursors() {
     if (newStart >= 0 && newEnd <= totalDuration && newStart < newEnd) {
         appState.cursorStart = newStart;
         appState.cursorEnd = newEnd;
-        
+
+        console.log("✅ Cursors centered successfully:", newStart.toFixed(3), "s to", newEnd.toFixed(3), "s");
+
         const visibleSeconds = (visibleWidth / 1000).toFixed(3);
         const spacingSeconds = (tenPercentMs / 1000).toFixed(3);
         setStatus(`Curseurs centrés: ${spacingSeconds}s (10% de ${visibleSeconds}s visible)`);
