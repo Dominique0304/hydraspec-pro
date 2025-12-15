@@ -780,19 +780,95 @@ function drawAnnotationConnectors(chart) {
         const pos = annotation.getPixelPosition(chart);
         if (!pos) return;
 
-        const startX = pos.x;
-        const startY = pos.y;
-        const endX = pos.x + annotation.offsetX;
-        const endY = pos.y + annotation.offsetY;
+        const markerX = pos.x;
+        const markerY = pos.y;
+
+        // Position et dimensions de la boîte d'annotation
+        const boxX = pos.x + annotation.offsetX;
+        const boxY = pos.y + annotation.offsetY;
+        const boxWidth = annotation.width;
+        const boxHeight = annotation.height;
+
+        // Calculer le centre de la boîte
+        const centerX = boxX + boxWidth / 2;
+        const centerY = boxY + boxHeight / 2;
+
+        // Calculer le point de connexion sur le BORD de la boîte
+        // en trouvant l'intersection entre la ligne (marqueur→centre) et le rectangle
+        let endX, endY;
+
+        // Direction du marqueur vers le centre
+        const dx = centerX - markerX;
+        const dy = centerY - markerY;
+
+        // Normaliser la direction
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length === 0) {
+            endX = centerX;
+            endY = centerY;
+        } else {
+            const dirX = dx / length;
+            const dirY = dy / length;
+
+            // Calculer les intersections possibles avec les 4 bords
+            const intersections = [];
+
+            // Bord gauche (x = boxX)
+            if (dirX !== 0) {
+                const t = (boxX - markerX) / dirX;
+                const y = markerY + t * dirY;
+                if (t > 0 && y >= boxY && y <= boxY + boxHeight) {
+                    intersections.push({ x: boxX, y: y, dist: t });
+                }
+            }
+
+            // Bord droit (x = boxX + boxWidth)
+            if (dirX !== 0) {
+                const t = (boxX + boxWidth - markerX) / dirX;
+                const y = markerY + t * dirY;
+                if (t > 0 && y >= boxY && y <= boxY + boxHeight) {
+                    intersections.push({ x: boxX + boxWidth, y: y, dist: t });
+                }
+            }
+
+            // Bord haut (y = boxY)
+            if (dirY !== 0) {
+                const t = (boxY - markerY) / dirY;
+                const x = markerX + t * dirX;
+                if (t > 0 && x >= boxX && x <= boxX + boxWidth) {
+                    intersections.push({ x: x, y: boxY, dist: t });
+                }
+            }
+
+            // Bord bas (y = boxY + boxHeight)
+            if (dirY !== 0) {
+                const t = (boxY + boxHeight - markerY) / dirY;
+                const x = markerX + t * dirX;
+                if (t > 0 && x >= boxX && x <= boxX + boxWidth) {
+                    intersections.push({ x: x, y: boxY + boxHeight, dist: t });
+                }
+            }
+
+            // Prendre l'intersection la plus proche
+            if (intersections.length > 0) {
+                intersections.sort((a, b) => a.dist - b.dist);
+                endX = intersections[0].x;
+                endY = intersections[0].y;
+            } else {
+                // Fallback: utiliser le centre
+                endX = centerX;
+                endY = centerY;
+            }
+        }
 
         // Dessiner la ligne pointillée
         ctx.beginPath();
-        ctx.moveTo(startX, startY);
+        ctx.moveTo(markerX, markerY);
 
         // Ligne avec une légère courbure
-        const cp1x = startX + (endX - startX) * 0.5;
-        const cp1y = startY;
-        const cp2x = startX + (endX - startX) * 0.5;
+        const cp1x = markerX + (endX - markerX) * 0.5;
+        const cp1y = markerY;
+        const cp2x = markerX + (endX - markerX) * 0.5;
         const cp2y = endY;
 
         ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
@@ -806,7 +882,7 @@ function drawAnnotationConnectors(chart) {
         // Point d'ancrage (marqueur) - AGRANDI pour meilleure visibilité
         ctx.setLineDash([]);
         ctx.beginPath();
-        ctx.arc(startX, startY, 8, 0, Math.PI * 2); // Augmenté de 6 à 8
+        ctx.arc(markerX, markerY, 8, 0, Math.PI * 2); // Augmenté de 6 à 8
         ctx.fillStyle = annotation.color;
         ctx.globalAlpha = 1; // Toujours visible
         ctx.fill();
