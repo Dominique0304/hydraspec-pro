@@ -353,17 +353,22 @@ canvas.addEventListener('mousedown', (e) => {
         if (appState.dragTarget === 'pan') {
             const dx = e.clientX - appState.lastX;
             const dy = e.clientY - appState.lastY;
-            
+
             // Déplacement horizontal
             const dxVal = (chart.scales.x.max - chart.scales.x.min) * (dx / canvas.width);
             chart.options.scales.x.min -= dxVal;
             chart.options.scales.x.max -= dxVal;
-            
-            // ✅ NOUVEAU : Déplacement vertical
-            const dyVal = (chart.scales.y.max - chart.scales.y.min) * (dy / canvas.height);
-            chart.options.scales.y.min += dyVal;
-            chart.options.scales.y.max += dyVal;
-            
+
+            // Déplacement vertical sur TOUTES les échelles Y
+            Object.keys(chart.scales).forEach(scaleKey => {
+                if (scaleKey.startsWith('y')) {
+                    const scale = chart.scales[scaleKey];
+                    const dyVal = (scale.max - scale.min) * (dy / canvas.height);
+                    chart.options.scales[scaleKey].min += dyVal;
+                    chart.options.scales[scaleKey].max += dyVal;
+                }
+            });
+
             appState.lastX = e.clientX;
             appState.lastY = e.clientY;
             chart.update('none');
@@ -437,13 +442,11 @@ function handleZoom(chart, e) {
     const zoomFactor = 1.1;
     const direction = e.deltaY > 0 ? 1 : -1;
     const rangeX = chart.scales.x.max - chart.scales.x.min;
-    const rangeY = chart.scales.y.max - chart.scales.y.min;
     const centerX = (chart.scales.x.min + chart.scales.x.max) / 2;
-    const centerY = (chart.scales.y.min + chart.scales.y.max) / 2;
-    
+
     const zoomX = !e.ctrlKey;
     const zoomY = !e.shiftKey;
-    
+
     if (zoomX) {
         const newRangeX = direction > 0 ? rangeX * zoomFactor : rangeX / zoomFactor;
         if(newRangeX > 0.000001) {
@@ -451,15 +454,24 @@ function handleZoom(chart, e) {
             chart.options.scales.x.max = centerX + newRangeX / 2;
         }
     }
-    
+
     if (zoomY) {
-        const newRangeY = direction > 0 ? rangeY * zoomFactor : rangeY / zoomFactor;
-        if(newRangeY > 0.000001) {
-            chart.options.scales.y.min = centerY - newRangeY / 2;
-            chart.options.scales.y.max = centerY + newRangeY / 2;
-        }
+        // Zoomer sur TOUTES les échelles Y (y, y0, y1, y2...)
+        Object.keys(chart.scales).forEach(scaleKey => {
+            if (scaleKey.startsWith('y')) {
+                const scale = chart.scales[scaleKey];
+                const rangeY = scale.max - scale.min;
+                const centerY = (scale.min + scale.max) / 2;
+                const newRangeY = direction > 0 ? rangeY * zoomFactor : rangeY / zoomFactor;
+
+                if(newRangeY > 0.000001) {
+                    chart.options.scales[scaleKey].min = centerY - newRangeY / 2;
+                    chart.options.scales[scaleKey].max = centerY + newRangeY / 2;
+                }
+            }
+        });
     }
-    
+
     chart.update('none');
 
     // METTRE À JOUR LES CHAMPS DE ZOOM APRÈS CHAQUE ZOOM
