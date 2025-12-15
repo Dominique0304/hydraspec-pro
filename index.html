@@ -309,6 +309,17 @@
                         </div>
                     </div>
 
+                    <!-- Déplacement (Pan) -->
+                    <div style="margin-bottom:15px;">
+                        <button id="pan-tool-btn" onclick="togglePanTool()"
+                                style="width:100%; padding:8px; background:var(--accent-blue); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.9rem;">
+                            <i class="fas fa-arrows-alt"></i> Déplacement
+                        </button>
+                        <div style="margin-top:5px; font-size:0.75rem; color:var(--text-muted); text-align:center;">
+                            Cliquez et glissez pour déplacer le graphique
+                        </div>
+                    </div>
+
                     <!-- Réserver de l'espace pour futurs outils -->
                     <div style="padding:10px; text-align:center; color:var(--text-muted); font-size:0.8rem; font-style:italic;">
                         Autres outils à venir...
@@ -653,6 +664,7 @@
 <script src="annotations.js"></script>
 <script src="multi-channel.js"></script>
 <script src="measure-tool.js"></script>
+<script src="pan-tool.js"></script>
 
 
 </body>

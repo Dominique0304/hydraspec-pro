@@ -80,21 +80,18 @@ function handleMeasureClick(event, chart) {
         }
     }
 
-    // Sinon, placer un nouveau point
+    // Sinon, placer un nouveau point (seulement si moins de 2 points)
     if (!measureState.point1) {
         measureState.point1 = { x: xValue, y: yValue };
         setStatus("Point 1 placé - Cliquez pour placer le point 2");
     } else if (!measureState.point2) {
         measureState.point2 = { x: xValue, y: yValue };
         updateMeasureResults();
-        setStatus("Point 2 placé - Glissez les points pour ajuster");
+        setStatus("Point 2 placé - Glissez les points pour ajuster ou utilisez Effacer");
     } else {
-        // Si les deux points existent, remplacer le point 1
-        measureState.point1 = { x: xValue, y: yValue };
-        measureState.point2 = null;
-        document.getElementById('measure-dx').textContent = '--';
-        document.getElementById('measure-dy').textContent = '--';
-        setStatus("Point 1 placé - Cliquez pour placer le point 2");
+        // Si les deux points existent déjà, ne rien faire
+        setStatus("2 points déjà placés - Glissez-les pour ajuster ou cliquez Effacer");
+        return true;
     }
 
     chart.update('none');
@@ -254,6 +251,55 @@ function drawMeasurePoints(chart) {
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
+
+        // Calculer les différences
+        const dx = Math.abs(measureState.point2.x - measureState.point1.x);
+        const dy = Math.abs(measureState.point2.y - measureState.point1.y);
+
+        // Annotation ΔX sur l'axe X (entre les deux lignes verticales)
+        const midX = (x1 + x2) / 2;
+        const axisYPos = yAxis.bottom + 20; // En dessous de l'axe X
+
+        ctx.fillStyle = '#FFD93D';
+        ctx.fillRect(midX - 35, axisYPos - 10, 70, 20);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(midX - 35, axisYPos - 10, 70, 20);
+
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        let dxText;
+        if (dx < 1000) {
+            dxText = 'Δt=' + dx.toFixed(2) + 'ms';
+        } else {
+            dxText = 'Δt=' + (dx / 1000).toFixed(3) + 's';
+        }
+        ctx.fillText(dxText, midX, axisYPos);
+
+        // Annotation ΔY sur l'axe Y (entre les deux lignes horizontales)
+        const midY = (y1 + y2) / 2;
+        const axisXPos = xAxis.left - 50; // À gauche de l'axe Y
+
+        ctx.save();
+        ctx.translate(axisXPos, midY);
+        ctx.rotate(-Math.PI / 2);
+
+        ctx.fillStyle = '#FFD93D';
+        ctx.fillRect(-35, -10, 70, 20);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-35, -10, 70, 20);
+
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const dyText = 'Δy=' + dy.toFixed(2);
+        ctx.fillText(dyText, 0, 0);
+
+        ctx.restore();
     }
 
     ctx.restore();

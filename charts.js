@@ -308,7 +308,14 @@ function setupCanvasInteractions() {
 canvas.addEventListener('mousedown', (e) => {
     const chart = appState.charts.time;
 
-    // Priorité à l'outil de mesure
+    // Priorité 1: Outil de déplacement
+    if (typeof handlePanClick === 'function') {
+        if (handlePanClick(e, chart)) {
+            return; // L'outil de déplacement a géré le clic
+        }
+    }
+
+    // Priorité 2: Outil de mesure
     if (typeof handleMeasureClick === 'function') {
         if (handleMeasureClick(e, chart)) {
             return; // L'outil de mesure a géré le clic
@@ -377,7 +384,14 @@ canvas.addEventListener('mousedown', (e) => {
     canvas.addEventListener('mousemove', (e) => {
         const chart = appState.charts.time;
 
-        // Gérer le drag de l'outil de mesure
+        // Priorité 1: Gérer le drag de l'outil de déplacement
+        if (typeof handlePanDrag === 'function') {
+            if (handlePanDrag(e, chart, canvas)) {
+                return; // L'outil de déplacement a géré le mouvement
+            }
+        }
+
+        // Priorité 2: Gérer le drag de l'outil de mesure
         if (typeof handleMeasureDrag === 'function') {
             if (handleMeasureDrag(e, chart)) {
                 return; // L'outil de mesure a géré le mouvement
@@ -466,7 +480,12 @@ canvas.addEventListener('mousedown', (e) => {
 
     // Gestion du relâchement souris (existant)
     window.addEventListener('mouseup', () => {
-        // Gérer le relâchement de l'outil de mesure
+        // Priorité 1: Gérer le relâchement de l'outil de déplacement
+        if (typeof handlePanMouseUp === 'function') {
+            handlePanMouseUp();
+        }
+
+        // Priorité 2: Gérer le relâchement de l'outil de mesure
         if (typeof handleMeasureMouseUp === 'function') {
             handleMeasureMouseUp();
         }
