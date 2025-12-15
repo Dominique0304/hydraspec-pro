@@ -111,7 +111,7 @@ function addAnnotationToToolbar() {
     annotationBtn.className = 'icon-btn';
     annotationBtn.id = 'annotation-btn';
     annotationBtn.innerHTML = '<i class="fas fa-comment-medical"></i>';
-    annotationBtn.title = 'Mode Annotation (A)\n• Clic: Créer annotation\n• Drag boîte: Déplacer position\n• Ctrl+Drag marqueur: Déplacer ancrage';
+    annotationBtn.title = 'Mode Annotation (A)\n• Clic: Créer annotation\n• Drag boîte: Déplacer position\n• CTRL+DRAG marqueur ⭕: Déplacer ancrage sur courbe';
     annotationBtn.style.marginLeft = '5px';
     
     annotationBtn.onclick = function() {
@@ -238,10 +238,11 @@ function setupAnnotationEvents(canvas) {
         const markerAnnotation = findMarkerAtPosition(x, y, chart);
         if (markerAnnotation && e.ctrlKey) {
             // Ctrl + drag sur marqueur = déplacer le point d'ancrage
+            console.log("🎯 Début du drag du marqueur avec Ctrl");
             isDraggingMarkerOnCanvas = true;
             draggedMarkerOnCanvas = markerAnnotation;
             canvas.style.cursor = 'grabbing';
-            setStatus('Déplacez le point d\'ancrage - Relâchez pour valider');
+            setStatus('Déplacez le point d\'ancrage (Ctrl+Drag) - Relâchez pour valider');
 
             // Désactiver pointer-events sur toutes les boîtes pendant le drag
             annotations.forEach(ann => {
@@ -251,6 +252,8 @@ function setupAnnotationEvents(canvas) {
 
             e.stopPropagation();
             e.preventDefault();
+        } else if (markerAnnotation && !e.ctrlKey) {
+            setStatus('Maintenez Ctrl enfoncé pour déplacer le marqueur');
         }
     });
     
@@ -264,18 +267,38 @@ function setupAnnotationEvents(canvas) {
 
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
 
         const xScale = chart.scales.x;
-        const yScale = chart.scales.y;
 
         const timeValue = xScale.getValueForPixel(x);
-        const yValue = yScale.getValueForPixel(y);
 
-        if (timeValue && yValue !== undefined) {
-            // Mettre à jour en temps réel
-            draggedMarkerOnCanvas.time = timeValue / 1000; // conversion ms → s
-            draggedMarkerOnCanvas.yValue = yValue;
+        if (timeValue && timeValue >= 0) {
+            const timeMs = timeValue; // déjà en ms
+
+            // SNAP SUR LA COURBE: trouver la valeur Y réelle de la courbe à ce temps
+            const dataTime = appState.fullDataTime;
+            const dataValues = appState.fullDataPressure;
+
+            // Trouver l'index du point le plus proche
+            let closestIndex = 0;
+            let minDiff = Math.abs(dataTime[0] - timeMs);
+
+            for (let i = 1; i < dataTime.length; i++) {
+                const diff = Math.abs(dataTime[i] - timeMs);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = i;
+                }
+                if (dataTime[i] > timeMs) break; // Optimisation: arrêter la recherche
+            }
+
+            // Prendre la valeur Y de la courbe au point le plus proche
+            const snappedYValue = dataValues[closestIndex];
+            const snappedTime = dataTime[closestIndex] / 1000; // conversion ms → s
+
+            // Mettre à jour en temps réel avec les valeurs "snapped" sur la courbe
+            draggedMarkerOnCanvas.time = snappedTime;
+            draggedMarkerOnCanvas.yValue = snappedYValue;
 
             // Forcer le redessin
             if (chart && chart.update) {
@@ -357,15 +380,18 @@ function setupAnnotationEvents(canvas) {
 
 // Nouvelle fonction pour trouver un marqueur à une position
 function findMarkerAtPosition(x, y, chart) {
-    const markerRadius = 8; // Rayon élargi pour faciliter la sélection
-    
+    const markerRadius = 12; // Rayon élargi pour faciliter la sélection (augmenté de 8 à 12)
+
     for (let i = annotations.length - 1; i >= 0; i--) {
         if (!annotations[i].visible) continue;
-        
+
         const pos = annotations[i].getPixelPosition(chart);
+        if (!pos) continue;
+
         const distance = Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2));
-        
+
         if (distance <= markerRadius) {
+            console.log("📍 Marqueur trouvé à distance:", distance.toFixed(1), "px");
             return annotations[i];
         }
     }
@@ -777,10 +803,10 @@ function drawAnnotationConnectors(chart) {
         ctx.globalAlpha = 1; // Toujours visible
         ctx.stroke();
 
-        // Point d'ancrage (marqueur)
+        // Point d'ancrage (marqueur) - AGRANDI pour meilleure visibilité
         ctx.setLineDash([]);
         ctx.beginPath();
-        ctx.arc(startX, startY, 6, 0, Math.PI * 2);
+        ctx.arc(startX, startY, 8, 0, Math.PI * 2); // Augmenté de 6 à 8
         ctx.fillStyle = annotation.color;
         ctx.globalAlpha = 1; // Toujours visible
         ctx.fill();
