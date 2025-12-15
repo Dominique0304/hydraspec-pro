@@ -774,7 +774,11 @@ let appState = {
     availableColumns: [],       // Liste des colonnes disponibles {name, label, index}
     currentColumnIndex: 0,      // Index de la colonne active
     allColumnData: [],          // Données de toutes les colonnes [time, col1, col2, ...]
-    columnNames: []             // Noms des colonnes
+    columnNames: [],            // Noms des colonnes
+
+    // Configuration multi-canaux
+    channelConfig: [],          // Configuration de chaque canal {visible, color, yAxisPosition, yMin, yMax, yAxisID}
+    xAxisChannel: 0             // Index du canal utilisé pour l'axe X (0 = temps par défaut)
 };
 
 let uiState = {
