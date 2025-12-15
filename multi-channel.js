@@ -192,3 +192,17 @@ function applyChannelConfig() {
     updateTimeChart();
     closeChannelConfig();
 }
+
+// Réinitialiser la configuration par défaut
+function resetChannelConfig() {
+    if (!confirm('Réinitialiser la configuration des canaux à leur état par défaut ?')) {
+        return;
+    }
+
+    // Réinitialiser
+    initChannelConfig();
+    updateChannelConfigUI();
+    updateTimeChart();
+
+    console.log("🔄 Configuration réinitialisée");
+}
