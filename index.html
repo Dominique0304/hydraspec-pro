@@ -202,7 +202,7 @@
                 </div>
 
                 <!-- Analysis Settings -->
-                <div class="control-group">
+                <div class="control-group" id="fft-params-panel">
                     <h3><i class="fas fa-sliders-h"></i> <span data-i18n="fft_params">Paramètres FFT</span></h3>
                     <div class="control-row">
                         <label data-i18n="window">Fenêtre:</label>
@@ -236,7 +236,7 @@
                 </div>
 
                 <!-- Spectrogram Settings -->
-                <div class="control-group">
+                <div class="control-group" id="spectro-params-panel">
                     <h3><i class="fas fa-chart-area"></i> <span data-i18n="spectrogram">Spectrogramme STFT</span></h3>
 
                     <div class="spectrogram-controls">
@@ -276,6 +276,42 @@
                     <div style="margin-top:8px;">
                         <label>Plage Couleurs:</label>
                         <div class="color-scale" id="color-scale"></div>
+                    </div>
+                </div>
+
+                <!-- Tools Panel -->
+                <div class="control-group">
+                    <h3><i class="fas fa-tools"></i> <span>Outils</span></h3>
+
+                    <!-- Mesure de différence -->
+                    <div style="margin-bottom:15px;">
+                        <button id="measure-diff-btn" onclick="toggleMeasureTool()"
+                                style="width:100%; padding:8px; background:var(--accent-blue); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.9rem;">
+                            <i class="fas fa-ruler-combined"></i> Mesure de Différence
+                        </button>
+
+                        <div id="measure-results" style="margin-top:10px; padding:8px; background:var(--input-bg); border-radius:4px; border:1px solid var(--border-color); display:none;">
+                            <div style="font-size:0.85rem; margin-bottom:5px; color:var(--text-muted);">
+                                <i class="fas fa-info-circle"></i> Cliquez 2 points sur le graphique
+                            </div>
+                            <div class="control-row" style="font-size:0.9rem;">
+                                <span>ΔX:</span>
+                                <span id="measure-dx" style="color:var(--accent-green); font-weight:bold;">--</span>
+                            </div>
+                            <div class="control-row" style="font-size:0.9rem;">
+                                <span>ΔY:</span>
+                                <span id="measure-dy" style="color:var(--accent-green); font-weight:bold;">--</span>
+                            </div>
+                            <button onclick="clearMeasure()"
+                                    style="width:100%; margin-top:8px; padding:4px; background:var(--bg-secondary); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                                <i class="fas fa-eraser"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Réserver de l'espace pour futurs outils -->
+                    <div style="padding:10px; text-align:center; color:var(--text-muted); font-size:0.8rem; font-style:italic;">
+                        Autres outils à venir...
                     </div>
                 </div>
 
@@ -616,6 +652,7 @@
     <!-- TOUTES LES DÉPENDANCES EN LOCAL -->
 <script src="annotations.js"></script>
 <script src="multi-channel.js"></script>
+<script src="measure-tool.js"></script>
 
 
 </body>

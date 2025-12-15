@@ -865,13 +865,19 @@ function toggleTimeDomain() {
 
 function toggleFreqDomain() {
     uiState.freqVisible = !uiState.freqVisible;
-    
+
     const freqContainer = document.getElementById('freq-container');
+    const fftParamsPanel = document.getElementById('fft-params-panel');
     const resizer1 = document.getElementById('resizer1');
     const resizer2 = document.getElementById('resizer2');
-    
+
     if (freqContainer) {
         freqContainer.classList.toggle('hidden', !uiState.freqVisible);
+    }
+
+    // Masquer/afficher le panneau des paramètres FFT
+    if (fftParamsPanel) {
+        fftParamsPanel.classList.toggle('hidden', !uiState.freqVisible);
     }
     
     // Gérer les resizers selon quels graphiques sont visibles
@@ -899,12 +905,18 @@ function toggleFreqDomain() {
 
 function toggleSpectrogram() {
     uiState.spectroVisible = !uiState.spectroVisible;
-    
+
     const spectroContainer = document.getElementById('spectro-container');
+    const spectroParamsPanel = document.getElementById('spectro-params-panel');
     const resizer2 = document.getElementById('resizer2');
-    
+
     if (spectroContainer) {
         spectroContainer.classList.toggle('hidden', !uiState.spectroVisible);
+    }
+
+    // Masquer/afficher le panneau des paramètres Spectrogramme
+    if (spectroParamsPanel) {
+        spectroParamsPanel.classList.toggle('hidden', !uiState.spectroVisible);
     }
     if (resizer2) {
         // Ne montrer resizer2 que si fréquence ET spectro sont visibles

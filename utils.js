@@ -208,6 +208,10 @@ function handleFileUpload(input) {
     // Initialiser la configuration multi-canaux
     if (typeof initChannelConfig === 'function') {
         initChannelConfig();
+        // Mettre à jour le graphique pour afficher tous les canaux immédiatement
+        if (typeof updateTimeChart === 'function') {
+            updateTimeChart();
+        }
     }
 
     // Attendre que le graphique soit prêt avant d'effectuer les opérations

@@ -32,19 +32,29 @@ appState.charts.time = new Chart(ctxTime, {
         ...commonOptions, 
         interaction: { mode: 'nearest', intersect: false },
         scales: { 
-            x: { 
-                type: 'linear', 
-                grid: { color: '#333' }, 
-                ticks: { 
+            x: {
+                type: 'linear',
+                grid: { color: '#333' },
+                ticks: {
                     color: '#aaa',
-                    callback: function(v) { 
-                        return (v/1000 < 60) ? (v/1000).toFixed(2)+"s" : (v/1000).toFixed(0)+"s"; 
+                    font: {
+                        size: 12,
+                        weight: 'normal'
+                    },
+                    callback: function(v) {
+                        return (v/1000 < 60) ? (v/1000).toFixed(2)+"s" : (v/1000).toFixed(0)+"s";
                     }
-                } 
+                }
             },
-            y: { 
-                grid: { color: '#333' }, 
-                ticks: { color: '#aaa' },
+            y: {
+                grid: { color: '#333' },
+                ticks: {
+                    color: '#aaa',
+                    font: {
+                        size: 12,
+                        weight: 'normal'
+                    }
+                },
                 // AJOUT DU TITRE DE L'AXE Y
                 title: {
                     display: true,
@@ -70,6 +80,13 @@ appState.charts.time = new Chart(ctxTime, {
             // Mettre à jour les positions des boîtes d'annotation pour qu'elles suivent le graphique
             if (typeof updateAnnotationPositions === 'function') {
                 updateAnnotationPositions(chart);
+            }
+        }
+    }, {
+        id: 'measureTool',
+        afterDraw: (chart) => {
+            if (typeof drawMeasurePoints === 'function') {
+                drawMeasurePoints(chart);
             }
         }
     }]
@@ -290,18 +307,26 @@ function setupCanvasInteractions() {
 // Gestion du clic souris
 canvas.addEventListener('mousedown', (e) => {
     const chart = appState.charts.time;
+
+    // Priorité à l'outil de mesure
+    if (typeof handleMeasureClick === 'function') {
+        if (handleMeasureClick(e, chart)) {
+            return; // L'outil de mesure a géré le clic
+        }
+    }
+
     const rect = canvas.getBoundingClientRect();
     const xPixel = e.clientX - rect.left; // Position X en pixels
     const yPixel = e.clientY - rect.top;  // Position Y en pixels
-    
+
     // Tolérance en pixels - ajustable selon vos préférences
     const pixelTol = 120; // 12 pixels de tolérance (plus facile à cliquer)
-    
+
     // Vérifier si on est dans la zone Y du graphique
     const chartTop = chart.scales.y.top;
     const chartBottom = chart.scales.y.bottom;
     const isInChartY = yPixel >= chartTop && yPixel <= chartBottom;
-    
+
     if (!isInChartY) return; // Ignorer les clics en dehors du graphique verticalement
     
     // Calculer les positions des curseurs en pixels
@@ -350,8 +375,16 @@ canvas.addEventListener('mousedown', (e) => {
 
     // Gestion du déplacement souris
     canvas.addEventListener('mousemove', (e) => {
-        if (!appState.isDragging) return;
         const chart = appState.charts.time;
+
+        // Gérer le drag de l'outil de mesure
+        if (typeof handleMeasureDrag === 'function') {
+            if (handleMeasureDrag(e, chart)) {
+                return; // L'outil de mesure a géré le mouvement
+            }
+        }
+
+        if (!appState.isDragging) return;
         const rect = canvas.getBoundingClientRect();
         
         if (appState.dragTarget === 'pan') {
@@ -433,9 +466,14 @@ canvas.addEventListener('mousedown', (e) => {
 
     // Gestion du relâchement souris (existant)
     window.addEventListener('mouseup', () => {
-        if(appState.isDragging) { 
-            appState.isDragging = false; 
-            appState.dragTarget = null; 
+        // Gérer le relâchement de l'outil de mesure
+        if (typeof handleMeasureMouseUp === 'function') {
+            handleMeasureMouseUp();
+        }
+
+        if(appState.isDragging) {
+            appState.isDragging = false;
+            appState.dragTarget = null;
             // Mise à jour finale des champs de zoom
             updateZoomInputs();
         }

@@ -1,0 +1,260 @@
+// =====================================
+// OUTIL DE MESURE DE DIFFÉRENCE
+// =====================================
+
+// État de l'outil de mesure
+let measureState = {
+    active: false,
+    point1: null,  // {x: valeur en ms, y: valeur en unité}
+    point2: null,
+    dragging: null  // 'point1' ou 'point2' ou null
+};
+
+// Activer/désactiver l'outil
+function toggleMeasureTool() {
+    measureState.active = !measureState.active;
+
+    const btn = document.getElementById('measure-diff-btn');
+    const results = document.getElementById('measure-results');
+
+    if (measureState.active) {
+        btn.style.background = 'var(--accent-green)';
+        btn.innerHTML = '<i class="fas fa-ruler-combined"></i> Outil Actif (cliquez 2 points)';
+        results.style.display = 'block';
+        setStatus("Outil de mesure activé - Cliquez sur le graphique pour placer les points");
+    } else {
+        btn.style.background = 'var(--accent-blue)';
+        btn.innerHTML = '<i class="fas fa-ruler-combined"></i> Mesure de Différence';
+        results.style.display = 'none';
+        measureState.point1 = null;
+        measureState.point2 = null;
+        appState.charts.time.update('none');
+        setStatus("Outil de mesure désactivé");
+    }
+}
+
+// Effacer les mesures
+function clearMeasure() {
+    measureState.point1 = null;
+    measureState.point2 = null;
+    document.getElementById('measure-dx').textContent = '--';
+    document.getElementById('measure-dy').textContent = '--';
+    appState.charts.time.update('none');
+    setStatus("Mesures effacées");
+}
+
+// Gérer le clic sur le graphique pour placer les points
+function handleMeasureClick(event, chart) {
+    if (!measureState.active) return false;
+
+    const rect = chart.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Convertir les coordonnées pixel en valeurs
+    const xValue = chart.scales.x.getValueForPixel(x);
+    const yValue = chart.scales.y.getValueForPixel(y);
+
+    // Vérifier si on clique près d'un point existant pour le déplacer
+    const tolerance = 10; // pixels
+
+    if (measureState.point1) {
+        const x1Pixel = chart.scales.x.getPixelForValue(measureState.point1.x);
+        const y1Pixel = chart.scales.y.getPixelForValue(measureState.point1.y);
+        const dist1 = Math.sqrt((x - x1Pixel)**2 + (y - y1Pixel)**2);
+
+        if (dist1 < tolerance) {
+            measureState.dragging = 'point1';
+            return true;
+        }
+    }
+
+    if (measureState.point2) {
+        const x2Pixel = chart.scales.x.getPixelForValue(measureState.point2.x);
+        const y2Pixel = chart.scales.y.getPixelForValue(measureState.point2.y);
+        const dist2 = Math.sqrt((x - x2Pixel)**2 + (y - y2Pixel)**2);
+
+        if (dist2 < tolerance) {
+            measureState.dragging = 'point2';
+            return true;
+        }
+    }
+
+    // Sinon, placer un nouveau point
+    if (!measureState.point1) {
+        measureState.point1 = { x: xValue, y: yValue };
+        setStatus("Point 1 placé - Cliquez pour placer le point 2");
+    } else if (!measureState.point2) {
+        measureState.point2 = { x: xValue, y: yValue };
+        updateMeasureResults();
+        setStatus("Point 2 placé - Glissez les points pour ajuster");
+    } else {
+        // Si les deux points existent, remplacer le point 1
+        measureState.point1 = { x: xValue, y: yValue };
+        measureState.point2 = null;
+        document.getElementById('measure-dx').textContent = '--';
+        document.getElementById('measure-dy').textContent = '--';
+        setStatus("Point 1 placé - Cliquez pour placer le point 2");
+    }
+
+    chart.update('none');
+    return true;
+}
+
+// Gérer le déplacement des points
+function handleMeasureDrag(event, chart) {
+    if (!measureState.dragging) return false;
+
+    const rect = chart.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const xValue = chart.scales.x.getValueForPixel(x);
+    const yValue = chart.scales.y.getValueForPixel(y);
+
+    if (measureState.dragging === 'point1') {
+        measureState.point1 = { x: xValue, y: yValue };
+    } else if (measureState.dragging === 'point2') {
+        measureState.point2 = { x: xValue, y: yValue };
+    }
+
+    updateMeasureResults();
+    chart.update('none');
+    return true;
+}
+
+// Terminer le déplacement
+function handleMeasureMouseUp() {
+    if (measureState.dragging) {
+        measureState.dragging = null;
+        return true;
+    }
+    return false;
+}
+
+// Mettre à jour les résultats
+function updateMeasureResults() {
+    if (!measureState.point1 || !measureState.point2) return;
+
+    const dx = Math.abs(measureState.point2.x - measureState.point1.x);
+    const dy = Math.abs(measureState.point2.y - measureState.point1.y);
+
+    // Affichage selon l'échelle de temps
+    let dxText;
+    if (dx < 1000) {
+        dxText = dx.toFixed(2) + ' ms';
+    } else {
+        dxText = (dx / 1000).toFixed(3) + ' s';
+    }
+
+    document.getElementById('measure-dx').textContent = dxText;
+    document.getElementById('measure-dy').textContent = dy.toFixed(3) + ' ' + (appState.yAxisLabel || '');
+}
+
+// Dessiner les points de mesure et les lignes
+function drawMeasurePoints(chart) {
+    if (!measureState.active) return;
+    if (!measureState.point1 && !measureState.point2) return;
+
+    const ctx = chart.ctx;
+    const xAxis = chart.scales.x;
+    const yAxis = chart.scales.y;
+
+    ctx.save();
+
+    // Dessiner le point 1
+    if (measureState.point1) {
+        const x1 = xAxis.getPixelForValue(measureState.point1.x);
+        const y1 = yAxis.getPixelForValue(measureState.point1.y);
+
+        // Lignes de repère
+        ctx.strokeStyle = '#FF6B6B';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+
+        // Ligne verticale
+        ctx.beginPath();
+        ctx.moveTo(x1, yAxis.top);
+        ctx.lineTo(x1, yAxis.bottom);
+        ctx.stroke();
+
+        // Ligne horizontale
+        ctx.beginPath();
+        ctx.moveTo(xAxis.left, y1);
+        ctx.lineTo(xAxis.right, y1);
+        ctx.stroke();
+
+        // Point
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#FF6B6B';
+        ctx.beginPath();
+        ctx.arc(x1, y1, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#FFF';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#FFF';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('1', x1, y1 + 4);
+    }
+
+    // Dessiner le point 2
+    if (measureState.point2) {
+        const x2 = xAxis.getPixelForValue(measureState.point2.x);
+        const y2 = yAxis.getPixelForValue(measureState.point2.y);
+
+        // Lignes de repère
+        ctx.strokeStyle = '#4ECDC4';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+
+        // Ligne verticale
+        ctx.beginPath();
+        ctx.moveTo(x2, yAxis.top);
+        ctx.lineTo(x2, yAxis.bottom);
+        ctx.stroke();
+
+        // Ligne horizontale
+        ctx.beginPath();
+        ctx.moveTo(xAxis.left, y2);
+        ctx.lineTo(xAxis.right, y2);
+        ctx.stroke();
+
+        // Point
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#4ECDC4';
+        ctx.beginPath();
+        ctx.arc(x2, y2, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#FFF';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#FFF';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('2', x2, y2 + 4);
+    }
+
+    // Dessiner une ligne entre les deux points
+    if (measureState.point1 && measureState.point2) {
+        const x1 = xAxis.getPixelForValue(measureState.point1.x);
+        const y1 = yAxis.getPixelForValue(measureState.point1.y);
+        const x2 = xAxis.getPixelForValue(measureState.point2.x);
+        const y2 = yAxis.getPixelForValue(measureState.point2.y);
+
+        ctx.strokeStyle = '#FFD93D';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
