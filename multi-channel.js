@@ -31,6 +31,7 @@ function initChannelConfig() {
         unit: col.unit || "",
         visible: true, // TOUS les canaux sont visibles par défaut
         color: DEFAULT_CHANNEL_COLORS[index % DEFAULT_CHANNEL_COLORS.length],
+        lineWidth: 2,  // Épaisseur de ligne par défaut
         yAxisPosition: index === 0 ? 'left' : 'right',  // Premier à gauche, autres à droite
         yMin: null,  // Auto
         yMax: null,  // Auto
@@ -100,6 +101,21 @@ function updateChannelConfigUI() {
         };
         colorCell.appendChild(colorInput);
 
+        // Épaisseur de ligne
+        const lineWidthCell = document.createElement('td');
+        const lineWidthInput = document.createElement('input');
+        lineWidthInput.type = 'number';
+        lineWidthInput.min = '0.5';
+        lineWidthInput.max = '10';
+        lineWidthInput.step = '0.5';
+        lineWidthInput.value = config.lineWidth;
+        lineWidthInput.style.width = '60px';
+        lineWidthInput.onchange = (e) => {
+            config.lineWidth = parseFloat(e.target.value);
+            updateTimeChart();
+        };
+        lineWidthCell.appendChild(lineWidthInput);
+
         // Position Y
         const posCell = document.createElement('td');
         const posSelect = document.createElement('select');
@@ -147,6 +163,7 @@ function updateChannelConfigUI() {
         row.appendChild(visibleCell);
         row.appendChild(nameCell);
         row.appendChild(colorCell);
+        row.appendChild(lineWidthCell);
         row.appendChild(posCell);
         row.appendChild(yMinCell);
         row.appendChild(yMaxCell);
@@ -256,7 +273,7 @@ function updateTimeChartMultiChannel() {
             data: downsampledY,
             borderColor: config.color,
             backgroundColor: config.color + '20',
-            borderWidth: 2,
+            borderWidth: config.lineWidth,
             pointRadius: 0,
             fill: false,
             yAxisID: config.yAxisID
