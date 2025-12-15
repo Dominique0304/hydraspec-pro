@@ -200,6 +200,10 @@ function setupResizer(resizerId, panelId) {
 // --- DRAWING HELPERS ---
 function drawCursors(chart) {
     if (!appState.fullDataTime.length) return;
+
+    // Ne pas afficher les curseurs si le graphique fréquentiel est masqué
+    if (typeof uiState !== 'undefined' && !uiState.freqVisible) return;
+
     const ctx = chart.ctx;
     const xAxis = chart.scales.x;
     const yAxis = chart.scales.y;
