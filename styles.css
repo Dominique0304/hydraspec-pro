@@ -861,6 +861,11 @@ textarea {
     display: none !important;
 }
 
+/* Masquage des panneaux de contrôle */
+.control-group.hidden {
+    display: none !important;
+}
+
 /* Ajustement pour les resizers quand un graphique est masqué */
 .gutter-v.hidden {
     display: none !important;

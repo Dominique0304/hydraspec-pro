@@ -278,28 +278,66 @@ function drawMeasurePoints(chart) {
         }
         ctx.fillText(dxText, midX, axisYPos);
 
-        // Annotation ΔY sur l'axe Y (entre les deux lignes horizontales)
+        // Annotations ΔY sur TOUS les axes Y visibles
         const midY = (y1 + y2) / 2;
-        const axisXPos = xAxis.left - 50; // À gauche de l'axe Y
 
-        ctx.save();
-        ctx.translate(axisXPos, midY);
-        ctx.rotate(-Math.PI / 2);
+        // Parcourir toutes les échelles Y
+        Object.keys(chart.scales).forEach((scaleKey, index) => {
+            if (!scaleKey.startsWith('y')) return; // Ignorer les échelles non-Y
 
-        ctx.fillStyle = '#FFD93D';
-        ctx.fillRect(-35, -10, 70, 20);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-35, -10, 70, 20);
+            const yScale = chart.scales[scaleKey];
+            if (!yScale.options.display && scaleKey !== 'y') return; // Ignorer les échelles cachées (sauf 'y' qui est toujours présente)
 
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const dyText = 'Δy=' + dy.toFixed(2);
-        ctx.fillText(dyText, 0, 0);
+            // Calculer les valeurs Y selon cette échelle
+            const y1Value = yScale.getValueForPixel(y1);
+            const y2Value = yScale.getValueForPixel(y2);
+            const dy = Math.abs(y2Value - y1Value);
 
-        ctx.restore();
+            // Déterminer la position de l'annotation selon la position de l'axe
+            let axisXPos;
+            let offset = 0;
+
+            if (yScale.options.position === 'left') {
+                // Axes à gauche: compter combien d'axes à gauche existent avant celui-ci
+                const leftAxesCount = Object.keys(chart.scales).filter((k, idx) =>
+                    k.startsWith('y') &&
+                    chart.scales[k].options.position === 'left' &&
+                    idx < Object.keys(chart.scales).indexOf(scaleKey)
+                ).length;
+                offset = leftAxesCount * 60; // Décalage pour chaque axe supplémentaire
+                axisXPos = xAxis.left - 50 - offset;
+            } else if (yScale.options.position === 'right') {
+                // Axes à droite: compter combien d'axes à droite existent avant celui-ci
+                const rightAxesCount = Object.keys(chart.scales).filter((k, idx) =>
+                    k.startsWith('y') &&
+                    chart.scales[k].options.position === 'right' &&
+                    idx < Object.keys(chart.scales).indexOf(scaleKey)
+                ).length;
+                offset = rightAxesCount * 60;
+                axisXPos = xAxis.right + 50 + offset;
+            } else {
+                return; // Ignorer les axes cachés
+            }
+
+            ctx.save();
+            ctx.translate(axisXPos, midY);
+            ctx.rotate(-Math.PI / 2);
+
+            ctx.fillStyle = '#FFD93D';
+            ctx.fillRect(-35, -10, 70, 20);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-35, -10, 70, 20);
+
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const dyText = 'Δy=' + dy.toFixed(2);
+            ctx.fillText(dyText, 0, 0);
+
+            ctx.restore();
+        });
     }
 
     ctx.restore();
