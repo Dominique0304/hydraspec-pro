@@ -29,7 +29,7 @@ function initChannelConfig() {
         name: col.name,
         label: col.label,
         unit: col.unit || "",
-        visible: index === 0, // Seul le premier canal est visible par défaut
+        visible: true, // TOUS les canaux sont visibles par défaut
         color: DEFAULT_CHANNEL_COLORS[index % DEFAULT_CHANNEL_COLORS.length],
         yAxisPosition: index === 0 ? 'left' : 'right',  // Premier à gauche, autres à droite
         yMin: null,  // Auto
@@ -275,14 +275,14 @@ function updateTimeChartMultiChannel() {
         chart.options.scales.x.title.text = xChannelConfig.label + (xChannelConfig.unit ? ` (${xChannelConfig.unit})` : '');
     }
 
-    // Supprimer les anciennes échelles Y
+    // Supprimer les anciennes échelles Y (sauf 'y' qu'on va recréer pour compatibilité)
     const oldScales = Object.keys(chart.options.scales).filter(key => key !== 'x');
     oldScales.forEach(key => {
         delete chart.options.scales[key];
     });
 
     // Créer les échelles Y pour chaque canal visible
-    visibleChannels.forEach(config => {
+    visibleChannels.forEach((config, index) => {
         const channelData = appState.allColumnData[config.index];
 
         // Calculer min/max
@@ -326,6 +326,35 @@ function updateTimeChartMultiChannel() {
             }
         };
     });
+
+    // IMPORTANT: Créer une échelle 'y' pour compatibilité avec curseurs et annotations
+    // Cette échelle est un alias de la première échelle visible
+    if (visibleChannels.length > 0) {
+        const firstChannel = visibleChannels[0];
+        const firstChannelData = appState.allColumnData[firstChannel.index];
+
+        // Calculer min/max pour la première échelle
+        let yMin, yMax;
+        if (firstChannel.yMin !== null && firstChannel.yMax !== null) {
+            yMin = firstChannel.yMin;
+            yMax = firstChannel.yMax;
+        } else {
+            const dataMin = Math.min(...firstChannelData);
+            const dataMax = Math.max(...firstChannelData);
+            const range = dataMax - dataMin;
+            yMin = firstChannel.yMin !== null ? firstChannel.yMin : dataMin - range * 0.1;
+            yMax = firstChannel.yMax !== null ? firstChannel.yMax : dataMax + range * 0.1;
+        }
+
+        // Créer l'échelle 'y' pour compatibilité
+        chart.options.scales.y = {
+            type: 'linear',
+            position: 'left',
+            display: false, // Cachée car on affiche déjà y0
+            min: yMin,
+            max: yMax
+        };
+    }
 
     chart.update();
 
