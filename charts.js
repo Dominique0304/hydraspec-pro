@@ -562,7 +562,8 @@ function updateStats() {
 }
 
 function performAnalysis() {
-    console.log("🔍 performAnalysis called");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("🔍 FFT Analysis Started");
 
     const t = appState.fullDataTime;
     const v = appState.fullDataPressure;
@@ -578,7 +579,15 @@ function performAnalysis() {
     const visibleMin = chart.options.scales.x.min || t[0];
     const visibleMax = chart.options.scales.x.max || t[t.length - 1];
 
-    console.log("📊 FFT: Analyzing VISIBLE RANGE (not cursors):", visibleMin.toFixed(2), "ms to", visibleMax.toFixed(2), "ms");
+    // AFFICHER CLAIREMENT LA DIFFÉRENCE ENTRE CURSEURS ET ZONE VISIBLE
+    console.log("📍 CURSEURS (rouges):",
+        "de", (appState.cursorStart * 1000).toFixed(2), "ms",
+        "à", (appState.cursorEnd * 1000).toFixed(2), "ms",
+        "→ PAS utilisés pour FFT");
+    console.log("📊 ZONE VISIBLE (zoom):",
+        "de", visibleMin.toFixed(2), "ms",
+        "à", visibleMax.toFixed(2), "ms",
+        "→ UTILISÉE pour FFT ✓");
 
     // Trouver les indices correspondant à la zone visible
     const i1 = t.findIndex(val => val >= visibleMin);
@@ -668,8 +677,9 @@ function performAnalysis() {
 
     appState.charts.freq.data.datasets[0].data = mags;
     appState.charts.freq.update('none');
-    
-    console.log("Analysis completed - Peak:", appState.peakFreq.toFixed(1), "Hz");
+
+    console.log("✅ FFT Analysis Completed - Peak:", appState.peakFreq.toFixed(1), "Hz");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         const cacheKey = `${raw.length}_${N}_${win}_${mean.toFixed(2)}`;
     
@@ -706,11 +716,6 @@ function centerCursors() {
     if (!chart || !appState.fullDataTime.length) {
         console.error("❌ Cannot center cursors: chart or data not ready");
         setStatus("Aucune donnée à centrer");
-        return;
-    }
-
-    if (!chart.options.scales.x.min || !chart.options.scales.x.max) {
-        console.error("❌ Cannot center cursors: chart scales not initialized");
         return;
     }
 
@@ -755,6 +760,12 @@ function centerCursors() {
         appState.cursorEnd = newEnd;
 
         console.log("✅ Cursors centered successfully:", newStart.toFixed(3), "s to", newEnd.toFixed(3), "s");
+
+        // Mettre à jour les statistiques et le graphique
+        updateStats();
+        if (chart && chart.update) {
+            chart.update('none');
+        }
 
         const visibleSeconds = (visibleWidth / 1000).toFixed(3);
         const spacingSeconds = (tenPercentMs / 1000).toFixed(3);

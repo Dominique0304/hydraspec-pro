@@ -217,13 +217,15 @@ function handleFileUpload(input) {
             console.error("❌ clearAnnotations function not found!");
         }
 
-        // Centrer les curseurs automatiquement
-        if (typeof centerCursors === 'function') {
-            console.log("✅ Centering cursors...");
-            centerCursors();
-        } else {
-            console.error("❌ centerCursors function not found!");
-        }
+        // Centrer les curseurs automatiquement après que le chart soit mis à jour
+        setTimeout(() => {
+            if (typeof centerCursors === 'function') {
+                console.log("✅ Calling centerCursors...");
+                centerCursors();
+            } else {
+                console.error("❌ centerCursors function not found!");
+            }
+        }, 400); // Délai supplémentaire pour le chart.update()
     }, 200); // Délai pour assurer que le chart est prêt
 
     setStatus(`Fichier chargé: ${validLines} points, ${appState.availableColumns.length} colonnes, Fs: ${appState.fs.toFixed(1)} Hz`);
