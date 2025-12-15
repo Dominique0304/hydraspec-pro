@@ -31,11 +31,12 @@ function initChannelConfig() {
         unit: col.unit || "",
         visible: true, // TOUS les canaux sont visibles par défaut
         color: DEFAULT_CHANNEL_COLORS[index % DEFAULT_CHANNEL_COLORS.length],
-        lineWidth: 2,  // Épaisseur de ligne par défaut
+        lineWidth: 0.5,  // Épaisseur de ligne par défaut
         yAxisPosition: index === 0 ? 'left' : 'right',  // Premier à gauche, autres à droite
         yMin: null,  // Auto
         yMax: null,  // Auto
-        yAxisID: `y${index}`
+        yAxisID: `y${index}`,
+        showFFT: index === 0  // Seul le premier canal affiche la FFT par défaut
     }));
 
     console.log("✅ Configuration initialisée pour", appState.channelConfig.length, "canaux");
@@ -160,6 +161,18 @@ function updateChannelConfigUI() {
         };
         yMaxCell.appendChild(yMaxInput);
 
+        // Checkbox FFT
+        const fftCell = document.createElement('td');
+        fftCell.style.textAlign = 'center';
+        const fftCheck = document.createElement('input');
+        fftCheck.type = 'checkbox';
+        fftCheck.checked = config.showFFT;
+        fftCheck.onchange = (e) => {
+            config.showFFT = e.target.checked;
+            performAnalysis();
+        };
+        fftCell.appendChild(fftCheck);
+
         row.appendChild(visibleCell);
         row.appendChild(nameCell);
         row.appendChild(colorCell);
@@ -167,6 +180,7 @@ function updateChannelConfigUI() {
         row.appendChild(posCell);
         row.appendChild(yMinCell);
         row.appendChild(yMaxCell);
+        row.appendChild(fftCell);
 
         tbody.appendChild(row);
     });
