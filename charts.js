@@ -569,44 +569,10 @@ function updateStats() {
  document.getElementById('res-rms').textContent = rms.toFixed(1) + " " + appState.yAxisLabel;
 }
 
-function performAnalysis() {
-    console.log("📊 performAnalysis called - Cursors:", appState.cursorStart, "s to", appState.cursorEnd, "s");
-
-    const t = appState.fullDataTime;
-    const v = appState.fullDataPressure;
-
-    // Utiliser les CURSEURS (comportement original) pour l'analyse spectrale
-    const cursorStartMs = appState.cursorStart * 1000;
-    const cursorEndMs = appState.cursorEnd * 1000;
-
-    console.log("📍 Analyzing data between CURSORS:", cursorStartMs.toFixed(2), "ms to", cursorEndMs.toFixed(2), "ms");
-
-    const i1 = t.findIndex(val => val >= cursorStartMs);
-    let i2 = t.findIndex(val => val >= cursorEndMs);
-
-    if(i2 === -1) i2 = t.length;
-
-    console.log("Found indices:", i1, "to", i2, "out of", t.length, "points");
-
-    if(i1 === -1 || i1 >= i2) {
-        console.log("Invalid selection - skipping analysis");
-        return;
-    }
-
-    const raw = Array.from(v.slice(i1, i2));
-    console.log("Data slice length:", raw.length);
-    
-    if(raw.length < 10) {
-        console.log("Not enough data points - skipping analysis");
-        return;
-    }
-
-    const N = parseInt(document.getElementById('fft-size').value);
-    const win = document.getElementById('window-func').value;
+// Fonction helper pour calculer la FFT d'un canal
+function computeFFTForChannel(raw, N, win, res) {
     const mean = raw.reduce((a,b)=>a+b,0)/raw.length;
-    
-    console.log("FFT parameters - Size:", N, "Window:", win);
-    
+
     const input = new Float32Array(N);
     for(let i=0; i<N; i++) {
         if(i<raw.length) {
@@ -620,7 +586,7 @@ function performAnalysis() {
 
     const re = new Float32Array(input);
     const im = new Float32Array(N).fill(0);
-    
+
     // FFT
     let j=0;
     for(let i=0; i<N; i++) {
@@ -643,8 +609,7 @@ function performAnalysis() {
     }
 
     const mags = [];
-    const res = appState.fs/N;
-    appState.allPeaks = [];
+    const peaks = [];
     let maxV=0, maxI=0;
 
     for(let i=0; i<N/2; i++) {
@@ -654,39 +619,125 @@ function performAnalysis() {
             if(mag > maxV) { maxV=mag; maxI=i; }
         }
     }
-    
+
     for(let i=1; i<mags.length-1; i++) {
         if(mags[i].y > mags[i-1].y && mags[i].y > mags[i+1].y) {
-            appState.allPeaks.push({freq: mags[i].x, amp: mags[i].y});
+            peaks.push({freq: mags[i].x, amp: mags[i].y});
         }
     }
 
-    appState.peakFreq = maxI*res;
-    appState.peakAmp = maxV;
-    document.getElementById('res-peak').textContent = appState.peakFreq.toFixed(1)+" Hz";
-        document.getElementById('res-amp').textContent = appState.peakAmp.toFixed(1) + " : " + appState.yAxisLabel; 
+    return {
+        mags,
+        peaks,
+        peakFreq: maxI*res,
+        peakAmp: maxV
+    };
+}
 
-    appState.charts.freq.data.datasets[0].data = mags;
+function performAnalysis() {
+    console.log("📊 performAnalysis called - Cursors:", appState.cursorStart, "s to", appState.cursorEnd, "s");
+
+    const t = appState.fullDataTime;
+    const cursorStartMs = appState.cursorStart * 1000;
+    const cursorEndMs = appState.cursorEnd * 1000;
+
+    console.log("📍 Analyzing data between CURSORS:", cursorStartMs.toFixed(2), "ms to", cursorEndMs.toFixed(2), "ms");
+
+    const i1 = t.findIndex(val => val >= cursorStartMs);
+    let i2 = t.findIndex(val => val >= cursorEndMs);
+
+    if(i2 === -1) i2 = t.length;
+
+    console.log("Found indices:", i1, "to", i2, "out of", t.length, "points");
+
+    if(i1 === -1 || i1 >= i2) {
+        console.log("Invalid selection - skipping analysis");
+        return;
+    }
+
+    // Mode multi-canaux
+    if (appState.channelConfig && appState.channelConfig.length > 0) {
+        const fftChannels = appState.channelConfig.filter(config => config.showFFT);
+
+        if (fftChannels.length === 0) {
+            // Aucun canal FFT sélectionné, vider le graphique
+            appState.charts.freq.data.datasets = [];
+            appState.charts.freq.update('none');
+            return;
+        }
+
+        const N = parseInt(document.getElementById('fft-size').value);
+        const win = document.getElementById('window-func').value;
+        const res = appState.fs/N;
+
+        // Calculer la FFT pour chaque canal sélectionné
+        appState.charts.freq.data.datasets = fftChannels.map(config => {
+            const channelData = appState.allColumnData[config.index];
+            const raw = Array.from(channelData.slice(i1, i2));
+
+            if(raw.length < 10) {
+                return null;
+            }
+
+            const result = computeFFTForChannel(raw, N, win, res);
+
+            return {
+                label: config.label,
+                data: result.mags,
+                borderColor: config.color,
+                backgroundColor: config.color + '20',
+                borderWidth: config.lineWidth || 1,
+                pointRadius: 0,
+                fill: false
+            };
+        }).filter(dataset => dataset !== null);
+
+        // Mettre à jour le pic principal (du premier canal)
+        if (fftChannels.length > 0) {
+            const firstChannelData = appState.allColumnData[fftChannels[0].index];
+            const raw = Array.from(firstChannelData.slice(i1, i2));
+
+            if(raw.length >= 10) {
+                const result = computeFFTForChannel(raw, N, win, res);
+                appState.allPeaks = result.peaks;
+                appState.peakFreq = result.peakFreq;
+                appState.peakAmp = result.peakAmp;
+                document.getElementById('res-peak').textContent = appState.peakFreq.toFixed(1)+" Hz";
+                document.getElementById('res-amp').textContent = appState.peakAmp.toFixed(1) + " : " + fftChannels[0].unit;
+            }
+        }
+
+        appState.charts.freq.update('none');
+        console.log("✅ FFT Multi-Channel Analysis Completed");
+        return;
+    }
+
+    // Mode simple (ancien comportement)
+    const v = appState.fullDataPressure;
+    const raw = Array.from(v.slice(i1, i2));
+    console.log("Data slice length:", raw.length);
+
+    if(raw.length < 10) {
+        console.log("Not enough data points - skipping analysis");
+        return;
+    }
+
+    const N = parseInt(document.getElementById('fft-size').value);
+    const win = document.getElementById('window-func').value;
+    const res = appState.fs/N;
+
+    const result = computeFFTForChannel(raw, N, win, res);
+
+    appState.allPeaks = result.peaks;
+    appState.peakFreq = result.peakFreq;
+    appState.peakAmp = result.peakAmp;
+    document.getElementById('res-peak').textContent = appState.peakFreq.toFixed(1)+" Hz";
+    document.getElementById('res-amp').textContent = appState.peakAmp.toFixed(1) + " : " + appState.yAxisLabel;
+
+    appState.charts.freq.data.datasets[0].data = result.mags;
     appState.charts.freq.update('none');
 
     console.log("✅ FFT Analysis Completed - Peak:", appState.peakFreq.toFixed(1), "Hz");
-
-        const cacheKey = `${raw.length}_${N}_${win}_${mean.toFixed(2)}`;
-    
-    if (fftCache.has(cacheKey)) {
-        console.log("Utilisation du cache FFT");
-        const cached = fftCache.get(cacheKey);
-        appState.allPeaks = cached.peaks;
-        appState.peakFreq = cached.peakFreq;
-        appState.peakAmp = cached.peakAmp;
-        
-        // Mettre à jour l'affichage
-        document.getElementById('res-peak').textContent = appState.peakFreq.toFixed(1)+" Hz";
-            document.getElementById('res-amp').textContent = appState.peakAmp.toFixed(1) + " : " + appState.yAxisLabel; 
-        appState.charts.freq.data.datasets[0].data = cached.mags;
-        appState.charts.freq.update('none');
-        return;
-    }
 }
 
 // Ajouter cette fonction pour gérer le redimensionnement quand un graphique est masqué
