@@ -89,6 +89,13 @@ appState.charts.time = new Chart(ctxTime, {
                 drawMeasurePoints(chart);
             }
         }
+    }, {
+        id: 'rulerTool',
+        afterDraw: (chart) => {
+            if (typeof drawRulerPoint === 'function') {
+                drawRulerPoint(chart);
+            }
+        }
     }]
 });
 
@@ -322,6 +329,13 @@ canvas.addEventListener('mousedown', (e) => {
         }
     }
 
+    // Priorité 3: Outil règle (mesurer)
+    if (typeof handleRulerClick === 'function') {
+        if (handleRulerClick(e, chart)) {
+            return; // L'outil règle a géré le clic
+        }
+    }
+
     const rect = canvas.getBoundingClientRect();
     const xPixel = e.clientX - rect.left; // Position X en pixels
     const yPixel = e.clientY - rect.top;  // Position Y en pixels
@@ -395,6 +409,13 @@ canvas.addEventListener('mousedown', (e) => {
         if (typeof handleMeasureDrag === 'function') {
             if (handleMeasureDrag(e, chart)) {
                 return; // L'outil de mesure a géré le mouvement
+            }
+        }
+
+        // Priorité 3: Gérer le drag de l'outil règle
+        if (typeof handleRulerDrag === 'function') {
+            if (handleRulerDrag(e, chart, canvas)) {
+                return; // L'outil règle a géré le mouvement
             }
         }
 
@@ -488,6 +509,11 @@ canvas.addEventListener('mousedown', (e) => {
         // Priorité 2: Gérer le relâchement de l'outil de mesure
         if (typeof handleMeasureMouseUp === 'function') {
             handleMeasureMouseUp();
+        }
+
+        // Priorité 3: Gérer le relâchement de l'outil règle
+        if (typeof handleRulerMouseUp === 'function') {
+            handleRulerMouseUp();
         }
 
         if(appState.isDragging) {
