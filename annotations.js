@@ -864,8 +864,9 @@ function saveAnnotations() {
 
     console.log("✅ Annotations saved to appState:", appState.annotations.length);
 
-    // Mettre à jour les notes utilisateur
-    updateUserNotesWithAnnotations();
+    // NOTE: Ne pas mettre à jour les notes utilisateur automatiquement
+    // Les annotations sont déjà visibles dans les fenêtres flottantes
+    // updateUserNotesWithAnnotations();
 }
 
 // Charger les annotations sauvegardées

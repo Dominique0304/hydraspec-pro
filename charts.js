@@ -370,14 +370,6 @@ canvas.addEventListener('mousedown', (e) => {
 
             // Mise à jour immédiate des champs de zoom
             updateZoomInputs();
-
-            // METTRE À JOUR L'ANALYSE FFT POUR LA ZONE VISIBLE
-            if(!appState.fftTimeout) {
-                appState.fftTimeout = setTimeout(() => {
-                    performAnalysis();
-                    appState.fftTimeout = null;
-                }, 100);
-            }
         }
         else if (appState.dragTarget === 'both') {
             const dx = e.clientX - appState.dragStartX;
@@ -472,14 +464,6 @@ function handleZoom(chart, e) {
 
     // METTRE À JOUR LES CHAMPS DE ZOOM APRÈS CHAQUE ZOOM
     setTimeout(updateZoomInputs, 10);
-
-    // METTRE À JOUR L'ANALYSE FFT POUR LA ZONE VISIBLE
-    if(!appState.fftTimeout) {
-        appState.fftTimeout = setTimeout(() => {
-            performAnalysis();
-            appState.fftTimeout = null;
-        }, 100);
-    }
 }
 function handleFreqZoom(chart, e) {
     const zoomFactor = 1.1;
@@ -562,36 +546,19 @@ function updateStats() {
 }
 
 function performAnalysis() {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("🔍 FFT Analysis Started");
+    console.log("📊 performAnalysis called - Cursors:", appState.cursorStart, "s to", appState.cursorEnd, "s");
 
     const t = appState.fullDataTime;
     const v = appState.fullDataPressure;
 
-    // Utiliser la zone VISIBLE (zoom) au lieu des curseurs
-    const chart = appState.charts.time;
-    if (!chart || !chart.options.scales.x) {
-        console.log("⚠️ Chart not ready - skipping analysis");
-        return;
-    }
+    // Utiliser les CURSEURS (comportement original) pour l'analyse spectrale
+    const cursorStartMs = appState.cursorStart * 1000;
+    const cursorEndMs = appState.cursorEnd * 1000;
 
-    // Obtenir les limites visibles du graphique (en millisecondes)
-    const visibleMin = chart.options.scales.x.min || t[0];
-    const visibleMax = chart.options.scales.x.max || t[t.length - 1];
+    console.log("📍 Analyzing data between CURSORS:", cursorStartMs.toFixed(2), "ms to", cursorEndMs.toFixed(2), "ms");
 
-    // AFFICHER CLAIREMENT LA DIFFÉRENCE ENTRE CURSEURS ET ZONE VISIBLE
-    console.log("📍 CURSEURS (rouges):",
-        "de", (appState.cursorStart * 1000).toFixed(2), "ms",
-        "à", (appState.cursorEnd * 1000).toFixed(2), "ms",
-        "→ PAS utilisés pour FFT");
-    console.log("📊 ZONE VISIBLE (zoom):",
-        "de", visibleMin.toFixed(2), "ms",
-        "à", visibleMax.toFixed(2), "ms",
-        "→ UTILISÉE pour FFT ✓");
-
-    // Trouver les indices correspondant à la zone visible
-    const i1 = t.findIndex(val => val >= visibleMin);
-    let i2 = t.findIndex(val => val >= visibleMax);
+    const i1 = t.findIndex(val => val >= cursorStartMs);
+    let i2 = t.findIndex(val => val >= cursorEndMs);
 
     if(i2 === -1) i2 = t.length;
 
@@ -679,7 +646,6 @@ function performAnalysis() {
     appState.charts.freq.update('none');
 
     console.log("✅ FFT Analysis Completed - Peak:", appState.peakFreq.toFixed(1), "Hz");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         const cacheKey = `${raw.length}_${N}_${win}_${mean.toFixed(2)}`;
     
