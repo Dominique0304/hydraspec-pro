@@ -67,10 +67,14 @@ function handleTrackMove(event, chart, canvas) {
     // Calculer les valeurs Y pour chaque dataset visible
     trackState.values = {};
 
+    console.log('📍 Track - Position X:', xValue.toFixed(3), 'Datasets:', chart.data.datasets.length);
+
     chart.data.datasets.forEach((dataset, index) => {
         if (!dataset.hidden && dataset.data && dataset.data.length > 0) {
             // Trouver les deux points les plus proches de xValue pour interpoler
             const yValue = interpolateValue(dataset.data, xValue);
+
+            console.log('   Dataset:', dataset.label, 'yAxisID:', dataset.yAxisID, 'yValue:', yValue);
 
             if (yValue !== null) {
                 trackState.values[dataset.label] = {
@@ -81,6 +85,8 @@ function handleTrackMove(event, chart, canvas) {
             }
         }
     });
+
+    console.log('📊 Track values:', Object.keys(trackState.values).length, 'channels');
 
     // Mettre à jour l'affichage
     updateTrackResults();
@@ -170,8 +176,8 @@ function drawTrackCursor(chart) {
 
     ctx.save();
 
-    // Dessiner la ligne verticale en pointillés violet
-    ctx.strokeStyle = '#9C27B0'; // Violet/Purple
+    // Dessiner la ligne verticale en pointillés VERT (comme sur la photo)
+    ctx.strokeStyle = '#4CAF50'; // Vert
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
 
@@ -232,15 +238,15 @@ function drawTrackCursor(chart) {
         ctx.translate(axisXPos, yPixel);
         ctx.rotate(-Math.PI / 2);
 
-        // Rectangle violet avec bordure
-        ctx.fillStyle = '#E1BEE7'; // Violet clair
+        // Rectangle blanc avec bordure de la couleur du dataset
+        ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(-30, -10, 60, 20);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = data.color;
+        ctx.lineWidth = 2;
         ctx.strokeRect(-30, -10, 60, 20);
 
-        // Texte
-        ctx.fillStyle = '#000';
+        // Texte dans la couleur du dataset
+        ctx.fillStyle = data.color;
         ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
