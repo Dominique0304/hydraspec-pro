@@ -80,6 +80,9 @@ function updateChannelConfigUI() {
         const visibleCheck = document.createElement('input');
         visibleCheck.type = 'checkbox';
         visibleCheck.checked = config.visible;
+        visibleCheck.style.width = '18px';
+        visibleCheck.style.height = '18px';
+        visibleCheck.style.cursor = 'pointer';
         visibleCheck.onchange = (e) => {
             config.visible = e.target.checked;
             updateTimeChart();

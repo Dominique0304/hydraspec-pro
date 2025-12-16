@@ -346,6 +346,27 @@
                         </div>
                     </div>
 
+                    <!-- Traquer (Curseur de suivi) -->
+                    <div style="margin-bottom:15px;">
+                        <button id="track-tool-btn" onclick="toggleTrackTool()"
+                                style="width:100%; padding:8px; background:var(--accent-blue); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.9rem;">
+                            <i class="fas fa-crosshairs"></i> Traquer
+                        </button>
+
+                        <div id="track-results" style="margin-top:10px; padding:8px; background:var(--input-bg); border-radius:4px; border:1px solid var(--border-color); display:none;">
+                            <div style="font-size:0.85rem; margin-bottom:5px; color:var(--text-muted);">
+                                <i class="fas fa-info-circle"></i> Déplacez la souris sur le graphique
+                            </div>
+                            <div id="track-values" style="font-size:0.85rem; max-height:150px; overflow-y:auto;">
+                                <!-- Les valeurs des canaux seront affichées ici -->
+                            </div>
+                            <button onclick="clearTrack()"
+                                    style="width:100%; margin-top:8px; padding:4px; background:var(--bg-secondary); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                                <i class="fas fa-eraser"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Réserver de l'espace pour futurs outils -->
                     <div style="padding:10px; text-align:center; color:var(--text-muted); font-size:0.8rem; font-style:italic;">
                         Autres outils à venir...
@@ -692,6 +713,7 @@
 <script src="measure-tool.js"></script>
 <script src="pan-tool.js"></script>
 <script src="ruler-tool.js"></script>
+<script src="track-tool.js"></script>
 
 
 </body>

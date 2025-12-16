@@ -168,4 +168,63 @@ function drawRulerPoint(chart) {
     ctx.fill();
 
     ctx.restore();
+
+    // Annotations Y sur TOUS les axes Y visibles
+    // Parcourir toutes les échelles Y
+    Object.keys(chart.scales).forEach((scaleKey, index) => {
+        if (!scaleKey.startsWith('y')) return; // Ignorer les échelles non-Y
+
+        const yScale = chart.scales[scaleKey];
+        if (!yScale.options.display && scaleKey !== 'y') return; // Ignorer les échelles cachées
+
+        // Calculer la valeur Y selon cette échelle au niveau de la ligne horizontale
+        const yValue = yScale.getValueForPixel(y);
+
+        // Déterminer la position de l'annotation selon la position de l'axe
+        let axisXPos;
+        let offset = 0;
+
+        if (yScale.options.position === 'left') {
+            // Axes à gauche: compter combien d'axes à gauche existent avant celui-ci
+            const leftAxesCount = Object.keys(chart.scales).filter((k, idx) =>
+                k.startsWith('y') &&
+                chart.scales[k].options.position === 'left' &&
+                idx < Object.keys(chart.scales).indexOf(scaleKey)
+            ).length;
+            offset = leftAxesCount * 60; // Décalage pour chaque axe supplémentaire
+            axisXPos = xAxis.left - 50 - offset;
+        } else if (yScale.options.position === 'right') {
+            // Axes à droite: compter combien d'axes à droite existent avant celui-ci
+            const rightAxesCount = Object.keys(chart.scales).filter((k, idx) =>
+                k.startsWith('y') &&
+                chart.scales[k].options.position === 'right' &&
+                idx < Object.keys(chart.scales).indexOf(scaleKey)
+            ).length;
+            offset = rightAxesCount * 60;
+            axisXPos = xAxis.right + 50 + offset;
+        } else {
+            return; // Ignorer les axes sans position
+        }
+
+        ctx.save();
+        ctx.translate(axisXPos, y);
+        ctx.rotate(-Math.PI / 2);
+
+        // Rectangle cyan clair avec bordure
+        ctx.fillStyle = '#4ECDC4';
+        ctx.fillRect(-30, -10, 60, 20);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-30, -10, 60, 20);
+
+        // Texte
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const yText = 'y=' + yValue.toFixed(2);
+        ctx.fillText(yText, 0, 0);
+
+        ctx.restore();
+    });
 }

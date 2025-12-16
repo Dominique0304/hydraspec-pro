@@ -290,7 +290,7 @@ button.icon-btn { padding: 4px 8px; font-size: 0.8rem; background: transparent; 
     z-index: 10;
 }
 
-.toolbar-title { font-size: 0.8rem; font-weight: bold; color: var(--text-muted); margin-right: auto; }
+.toolbar-title { font-size: 0.8rem; font-weight: bold; color: var(--text-muted); margin-right: auto; background: transparent !important; }
 
 .stats-box {
     background: var(--input-bg);
@@ -1007,6 +1007,7 @@ textarea:focus {
     font-weight: bold;
     color: var(--text-muted);
     margin-right: auto;
+    background: transparent !important;
     display: flex;
     align-items: center;
     gap: 5px;

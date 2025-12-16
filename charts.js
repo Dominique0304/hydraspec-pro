@@ -96,6 +96,13 @@ appState.charts.time = new Chart(ctxTime, {
                 drawRulerPoint(chart);
             }
         }
+    }, {
+        id: 'trackTool',
+        afterDraw: (chart) => {
+            if (typeof drawTrackCursor === 'function') {
+                drawTrackCursor(chart);
+            }
+        }
     }]
 });
 
@@ -416,6 +423,13 @@ canvas.addEventListener('mousedown', (e) => {
         if (typeof handleRulerDrag === 'function') {
             if (handleRulerDrag(e, chart, canvas)) {
                 return; // L'outil règle a géré le mouvement
+            }
+        }
+
+        // Priorité 4: Gérer le tracking (outil traquer)
+        if (typeof handleTrackMove === 'function') {
+            if (handleTrackMove(e, chart, canvas)) {
+                return; // L'outil de tracking a géré le mouvement
             }
         }
 
