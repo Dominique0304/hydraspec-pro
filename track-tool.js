@@ -182,13 +182,32 @@ function drawTrackCursor(chart) {
 
     ctx.setLineDash([]);
 
+    // Compter les axes à gauche et à droite pour calculer les offsets
+    const leftAxes = [];
+    const rightAxes = [];
+
+    Object.keys(chart.scales).forEach(scaleKey => {
+        if (!scaleKey.startsWith('y')) return;
+        const scale = chart.scales[scaleKey];
+        if (scale.options && scale.options.display !== false) {
+            if (scale.options.position === 'left') {
+                leftAxes.push(scaleKey);
+            } else if (scale.options.position === 'right') {
+                rightAxes.push(scaleKey);
+            }
+        }
+    });
+
     // Dessiner les annotations sur chaque axe Y pour chaque dataset
     Object.keys(trackState.values).forEach(label => {
         const data = trackState.values[label];
         const yAxisID = data.yAxisID;
         const yScale = chart.scales[yAxisID];
 
-        if (!yScale) return;
+        if (!yScale) {
+            console.log('⚠️ Échelle non trouvée:', yAxisID);
+            return;
+        }
 
         const yPixel = yScale.getPixelForValue(data.value);
 
@@ -197,22 +216,15 @@ function drawTrackCursor(chart) {
         let offset = 0;
 
         if (yScale.options.position === 'left') {
-            const leftAxesCount = Object.keys(chart.scales).filter((k, idx) =>
-                k.startsWith('y') &&
-                chart.scales[k].options.position === 'left' &&
-                idx < Object.keys(chart.scales).indexOf(yAxisID)
-            ).length;
-            offset = leftAxesCount * 60;
+            const axisIndex = leftAxes.indexOf(yAxisID);
+            offset = axisIndex * 60;
             axisXPos = xAxis.left - 50 - offset;
         } else if (yScale.options.position === 'right') {
-            const rightAxesCount = Object.keys(chart.scales).filter((k, idx) =>
-                k.startsWith('y') &&
-                chart.scales[k].options.position === 'right' &&
-                idx < Object.keys(chart.scales).indexOf(yAxisID)
-            ).length;
-            offset = rightAxesCount * 60;
+            const axisIndex = rightAxes.indexOf(yAxisID);
+            offset = axisIndex * 60;
             axisXPos = xAxis.right + 50 + offset;
         } else {
+            console.log('⚠️ Position non définie pour:', yAxisID);
             return;
         }
 

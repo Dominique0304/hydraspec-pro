@@ -751,9 +751,18 @@ function performAnalysis() {
 
     console.log("Found indices:", i1, "to", i2, "out of", t.length, "points");
 
-    if(i1 === -1 || i1 >= i2) {
+    if(i1 === -1) {
         console.log("Invalid selection - skipping analysis");
         return;
+    }
+
+    // Si les curseurs se touchent ou sont très proches, prendre au minimum 100 points autour
+    const minPoints = 100;
+    if(i2 - i1 < minPoints) {
+        const center = Math.floor((i1 + i2) / 2);
+        i1 = Math.max(0, center - Math.floor(minPoints / 2));
+        i2 = Math.min(t.length, i1 + minPoints);
+        console.log("Curseurs trop proches - Extension de la sélection à", minPoints, "points:", i1, "to", i2);
     }
 
     // Mode multi-canaux

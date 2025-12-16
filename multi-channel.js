@@ -170,6 +170,9 @@ function updateChannelConfigUI() {
         const fftCheck = document.createElement('input');
         fftCheck.type = 'checkbox';
         fftCheck.checked = config.showFFT;
+        fftCheck.style.width = '18px';
+        fftCheck.style.height = '18px';
+        fftCheck.style.cursor = 'pointer';
         fftCheck.onchange = (e) => {
             config.showFFT = e.target.checked;
             performAnalysis();

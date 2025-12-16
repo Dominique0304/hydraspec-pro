@@ -291,6 +291,8 @@ button.icon-btn { padding: 4px 8px; font-size: 0.8rem; background: transparent; 
 }
 
 .toolbar-title { font-size: 0.8rem; font-weight: bold; color: var(--text-muted); margin-right: auto; background: transparent !important; }
+.toolbar-title span { background: transparent !important; }
+.toolbar-title i { background: transparent !important; }
 
 .stats-box {
     background: var(--input-bg);
@@ -1011,6 +1013,14 @@ textarea:focus {
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+.toolbar-title span {
+    background: transparent !important;
+}
+
+.toolbar-title i {
+    background: transparent !important;
 }
 
 /* Ajouter focus styles pour accessibilité */
