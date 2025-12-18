@@ -868,6 +868,7 @@ function toggleFreqDomain() {
 
     const freqContainer = document.getElementById('freq-container');
     const fftParamsPanel = document.getElementById('fft-params-panel');
+    const resultsPanel = document.getElementById('results-panel');
     const resizer1 = document.getElementById('resizer1');
     const resizer2 = document.getElementById('resizer2');
 
@@ -878,6 +879,11 @@ function toggleFreqDomain() {
     // Masquer/afficher le panneau des paramètres FFT
     if (fftParamsPanel) {
         fftParamsPanel.classList.toggle('hidden', !uiState.freqVisible);
+    }
+
+    // Masquer/afficher le panneau Résultats
+    if (resultsPanel) {
+        resultsPanel.classList.toggle('hidden', !uiState.freqVisible);
     }
     
     // Gérer les resizers selon quels graphiques sont visibles

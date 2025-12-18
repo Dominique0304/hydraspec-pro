@@ -343,6 +343,13 @@ canvas.addEventListener('mousedown', (e) => {
         }
     }
 
+    // Priorité 4: Outil Traquer
+    if (typeof handleTrackClick === 'function') {
+        if (handleTrackClick(e, chart)) {
+            return; // L'outil Traquer a géré le clic
+        }
+    }
+
     const rect = canvas.getBoundingClientRect();
     const xPixel = e.clientX - rect.left; // Position X en pixels
     const yPixel = e.clientY - rect.top;  // Position Y en pixels
@@ -528,6 +535,11 @@ canvas.addEventListener('mousedown', (e) => {
         // Priorité 3: Gérer le relâchement de l'outil règle
         if (typeof handleRulerMouseUp === 'function') {
             handleRulerMouseUp();
+        }
+
+        // Priorité 4: Gérer le relâchement de l'outil Traquer
+        if (typeof handleTrackMouseUp === 'function') {
+            handleTrackMouseUp();
         }
 
         if(appState.isDragging) {

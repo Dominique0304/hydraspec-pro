@@ -321,7 +321,13 @@ function drawMeasurePoints(chart) {
 
             ctx.save();
             ctx.translate(axisXPos, midY);
-            ctx.rotate(-Math.PI / 2);
+
+            // Rotation différente selon le côté : gauche -90°, droite +90° (pour lire de bas en haut)
+            if (yScale.options.position === 'left') {
+                ctx.rotate(-Math.PI / 2); // -90° : se lit de bas en haut
+            } else {
+                ctx.rotate(Math.PI / 2);  // +90° : se lit de bas en haut
+            }
 
             ctx.fillStyle = '#FFD93D';
             ctx.fillRect(-35, -10, 70, 20);

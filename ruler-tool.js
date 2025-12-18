@@ -208,7 +208,13 @@ function drawRulerPoint(chart) {
 
         ctx.save();
         ctx.translate(axisXPos, y);
-        ctx.rotate(-Math.PI / 2);
+
+        // Rotation différente selon le côté : gauche -90°, droite +90° (pour lire de bas en haut)
+        if (yScale.options.position === 'left') {
+            ctx.rotate(-Math.PI / 2); // -90° : se lit de bas en haut
+        } else {
+            ctx.rotate(Math.PI / 2);  // +90° : se lit de bas en haut
+        }
 
         // Rectangle cyan clair avec bordure
         ctx.fillStyle = '#4ECDC4';

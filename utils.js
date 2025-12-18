@@ -552,6 +552,13 @@ function updateColumnSelector() {
             const option = document.createElement('option');
             option.value = idx;
             option.textContent = col.label;
+
+            // Appliquer la couleur du canal si disponible
+            if (appState.channelConfig && appState.channelConfig[idx]) {
+                option.style.color = appState.channelConfig[idx].color;
+                option.style.fontWeight = 'bold';
+            }
+
             selector.appendChild(option);
         });
 
