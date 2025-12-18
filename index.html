@@ -235,6 +235,26 @@
                     </div>
                 </div>
 
+                <!-- Results -->
+                <div class="control-group" id="results-panel">
+                    <h3><i class="fas fa-chart-line"></i> <span data-i18n="results">Résultats</span></h3>
+                    <div
+                        style="background:var(--input-bg); padding:10px; border-radius:4px; font-size:0.85rem; border:1px solid var(--border-color);">
+                        <div class="control-row">
+                            <span data-i18n="freq_dom">Fréq. Dominante:</span>
+                            <span id="res-peak" style="color:var(--accent-green); font-weight:bold;">-- Hz</span>
+                        </div>
+                        <div class="control-row">
+                            <span data-i18n="amp_max">Amplitude Max:</span>
+                            <span id="res-amp" style="color:var(--accent-green); font-weight:bold;">-- Bar</span>
+                        </div>
+                        <div class="control-row">
+                            <span data-i18n="rms_sel">RMS Sélection:</span>
+                            <span id="res-rms" style="color:var(--accent-blue);">--</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Spectrogram Settings -->
                 <div class="control-group" id="spectro-params-panel">
                     <h3><i class="fas fa-chart-area"></i> <span data-i18n="spectrogram">Spectrogramme STFT</span></h3>
@@ -370,26 +390,6 @@
                     <!-- Réserver de l'espace pour futurs outils -->
                     <div style="padding:10px; text-align:center; color:var(--text-muted); font-size:0.8rem; font-style:italic;">
                         Autres outils à venir...
-                    </div>
-                </div>
-
-                <!-- Results -->
-                <div class="control-group" id="results-panel">
-                    <h3><i class="fas fa-chart-line"></i> <span data-i18n="results">Résultats</span></h3>
-                    <div
-                        style="background:var(--input-bg); padding:10px; border-radius:4px; font-size:0.85rem; border:1px solid var(--border-color);">
-                        <div class="control-row">
-                            <span data-i18n="freq_dom">Fréq. Dominante:</span>
-                            <span id="res-peak" style="color:var(--accent-green); font-weight:bold;">-- Hz</span>
-                        </div>
-                        <div class="control-row">
-                            <span data-i18n="amp_max">Amplitude Max:</span>
-                            <span id="res-amp" style="color:var(--accent-green); font-weight:bold;">-- Bar</span>
-                        </div>
-                        <div class="control-row">
-                            <span data-i18n="rms_sel">RMS Sélection:</span>
-                            <span id="res-rms" style="color:var(--accent-blue);">--</span>
-                        </div>
                     </div>
                 </div>
         </aside>
